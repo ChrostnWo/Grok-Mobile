@@ -2,11 +2,11 @@
 
 Repo: https://github.com/ChrostnWo/Grok-Mobile
 
-One plugin. Works in the **desktop app** and **iOS / Android**. No Grok CLI, no Node APIs.
+Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-- **Laptop / tablet:** right sidebar chat, status bar, right-click on selected text
-- **Phone:** full-width sheet, 44px buttons, 16px inputs so iOS does not zoom
-- **Both:** same API key, same commands, same vault settings if you sync `.obsidian`
+## Privacy and network use
+
+This plugin sends the text you choose (selection, note, or prompt) to **xAI** at `https://api.x.ai` when you run a command or tap Send. It does not work without an xAI API key from https://console.x.ai . xAI bills API usage separately. The key is stored only in this vault's plugin settings (`data.json`). Do not commit that file.
 
 ## Install from this repo
 
@@ -20,8 +20,6 @@ One plugin. Works in the **desktop app** and **iOS / Android**. No Grok CLI, no 
 
 4. Obsidian → Settings → Community plugins → Restricted mode **off** → enable **Grok**.
 5. Settings → Grok → paste an xAI key from https://console.x.ai
-
-Do not commit `data.json`. That file holds your API key.
 
 ## Use it
 
@@ -39,15 +37,9 @@ Ribbon sparkles icon, or command palette:
 
 On a laptop, select text → right click → **Ask Grok about selection**.
 
-Hotkey idea: bind **Open Grok chat** to `Ctrl/Cmd + Shift + G`.
-
 ## Layout
 
-Settings → Chat layout:
-
-- **Auto** — sidebar on laptop/tablet, popup sheet on a phone
-- **Always sidebar**
-- **Always popup sheet**
+Settings → Chat layout: Auto, always sidebar, or always popup sheet.
 
 ## Models
 
