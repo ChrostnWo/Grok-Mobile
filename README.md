@@ -4,6 +4,10 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
+## Support
+
+If this plugin is useful, you can [buy me a coffee](https://buymeacoffee.com/chrostn).
+
 ## Privacy and network use
 
 This plugin sends the text you choose (selection, note, or prompt) to **xAI** at `https://api.x.ai` when you run a command or tap Send. It does not work without an xAI API key from https://console.x.ai . xAI bills API usage separately. The key is stored only in this vault's plugin settings (`data.json`). Do not commit that file.
