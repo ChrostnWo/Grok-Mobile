@@ -6,5 +6,8 @@
   "description": "Talk to Grok from a note on laptop, tablet, and phone. Sidebar chat on desktop, sheet on phone. Ask about a note or selection, summarize, rewrite, and insert the reply.",
   "author": "Grok Mobile",
   "authorUrl": "https://x.ai",
+  "fundingUrl": {
+    "Buy Me a Coffee": "https://buymeacoffee.com/chrostn"
+  },
   "isDesktopOnly": false
 }
