@@ -3,7 +3,7 @@
   "name": "Grok",
   "version": "1.1.0",
   "minAppVersion": "1.5.0",
-  "description": "Talk to Grok from Obsidian on laptop, tablet, and phone. Sidebar chat on desktop, sheet on phone. Ask about a note or selection, summarize, rewrite, and insert the reply. Uses the xAI API — no CLI.",
+  "description": "Talk to Grok from a note on laptop, tablet, and phone. Sidebar chat on desktop, sheet on phone. Ask about a note or selection, summarize, rewrite, and insert the reply.",
   "author": "Grok Mobile",
   "authorUrl": "https://x.ai",
   "isDesktopOnly": false
