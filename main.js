@@ -8,6 +8,7 @@ const {
   ItemView,
   Platform,
   requestUrl,
+  MarkdownRenderer,
 } = require("obsidian");
 
 const VIEW_TYPE = "grok-chat-view";
@@ -318,6 +319,52 @@ class GrokPlugin extends Plugin {
   }
 }
 
+
+const QUICK_ACTIONS = [
+  { id: "summarize", label: "Summarize", needs: "note", prompt: "Summarize the context. Use a short heading, 5-8 bullets, then a one-line takeaway. Output only the summary." },
+  { id: "rewrite", label: "Rewrite", needs: "selection", prompt: "Rewrite the context so it is clearer and tighter. Keep the meaning. Output only the rewrite." },
+  { id: "grammar", label: "Fix grammar", needs: "selection", prompt: "Fix grammar, spelling, and punctuation. Keep the author's voice. Output only the corrected text." },
+  { id: "continue", label: "Continue", needs: "cursor", prompt: "Continue this note in the same voice and structure. Output only the next paragraphs, no preamble." },
+];
+
+function contextForChip(host, action) {
+  const view = host.app.workspace.getActiveViewOfType(MarkdownView);
+  const editor = view ? view.editor : null;
+  const title = view && view.file ? view.file.basename : (host.opts && host.opts.title) || "";
+  const saved = host.opts && host.opts.seed ? host.opts.seed : "";
+  if (!editor) {
+    if (!saved.trim()) return null;
+    return { seed: saved, label: (host.opts && host.opts.label) || "context", title: title };
+  }
+  const sel = editor.getSelection() || "";
+  if (action.needs === "cursor") {
+    const before = editor.getRange({ line: 0, ch: 0 }, editor.getCursor());
+    const seed = (before && before.trim()) ? before : (editor.getValue() || saved);
+    if (!seed.trim()) return null;
+    return { seed: seed, label: "note", title: title || "Untitled" };
+  }
+  if (action.needs === "selection") {
+    const seed = sel.trim() ? sel : saved;
+    if (!seed.trim()) return null;
+    return { seed: seed, label: sel.trim() ? "selection" : ((host.opts && host.opts.label) || "context"), title: title || "Untitled" };
+  }
+  const seed = sel.trim() || editor.getValue() || saved;
+  if (!seed.trim()) return null;
+  return { seed: seed, label: sel.trim() ? "selection" : "note", title: title || "Untitled" };
+}
+
+function runQuickChip(host, action) {
+  if (host.busy) return;
+  const ctx = contextForChip(host, action);
+  if (!ctx) {
+    new Notice(action.needs === "selection" ? "Select text, or tap Use this note first." : "Open a note first.");
+    return;
+  }
+  applyChatOpts(host, Object.assign({}, ctx, { presetPrompt: action.prompt }));
+  if (host.promptEl) host.promptEl.value = action.prompt;
+  host.send();
+}
+
 function mountChat(root, host) {
   root.empty();
   const wrap = root.createDiv({ cls: "gm-wrap" });
@@ -329,6 +376,13 @@ function mountChat(root, host) {
   host.ctxChip = meta.createSpan({ cls: "gm-chip", text: "no context" });
   host.promptEl = wrap.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "Ask Grok…  Ctrl/Cmd+Enter to send", rows: "4" } });
   host.hintEl = wrap.createDiv({ cls: "gm-hint" });
+  const chips = wrap.createDiv({ cls: "gm-chips" });
+  host.chipBtns = [];
+  QUICK_ACTIONS.forEach((action) => {
+    const btn = chips.createEl("button", { text: action.label, cls: "gm-chip-btn", attr: { type: "button" } });
+    btn.addEventListener("click", () => runQuickChip(host, action));
+    host.chipBtns.push(btn);
+  });
   host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
   const actions = wrap.createDiv({ cls: "gm-actions" });
   host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
@@ -370,6 +424,7 @@ async function sendChat(host) {
   host.busy = true;
   host.sendBtn.disabled = true;
   host.stopBtn.disabled = false;
+  setChipsEnabled(host, false);
   setOut(host, "Thinking…");
   const messages = [{ role: "system", content: host.plugin.settings.systemPrompt }];
   if (host.opts && host.opts.seed && host.opts.seed.trim()) {
@@ -380,7 +435,8 @@ async function sendChat(host) {
   try {
     const text = await host.plugin.complete(messages, { onToken: (partial) => { host.reply = partial; setOut(host, partial); } });
     host.reply = text;
-    setOut(host, text || "(empty reply)");
+    if (text) await renderReply(host, text);
+    else setOut(host, "(empty reply)");
     const ok = !!text;
     host.insertBtn.disabled = !ok;
     host.copyBtn.disabled = !ok;
@@ -392,6 +448,7 @@ async function sendChat(host) {
     host.busy = false;
     host.sendBtn.disabled = false;
     host.stopBtn.disabled = true;
+    setChipsEnabled(host, true);
   }
 }
 function stopChat(host) {
@@ -400,13 +457,32 @@ function stopChat(host) {
   if (host.sendBtn) host.sendBtn.disabled = false;
   if (host.stopBtn) host.stopBtn.disabled = true;
 }
+function setChipsEnabled(host, on) {
+  (host.chipBtns || []).forEach((btn) => { btn.disabled = !on; });
+}
 function setOut(host, text, kind) {
   host.outEl.removeClass("is-empty");
   host.outEl.removeClass("is-error");
+  host.outEl.removeClass("is-md");
   if (kind === "error") host.outEl.addClass("is-error");
   if (!text) host.outEl.addClass("is-empty");
   host.outEl.setText(text || "Reply will show here.");
   host.outEl.scrollTop = host.outEl.scrollHeight;
+}
+async function renderReply(host, text) {
+  host.outEl.removeClass("is-empty");
+  host.outEl.removeClass("is-error");
+  host.outEl.addClass("is-md");
+  host.outEl.empty();
+  const view = host.app.workspace.getActiveViewOfType(MarkdownView);
+  const sourcePath = view && view.file ? view.file.path : "";
+  try {
+    await MarkdownRenderer.render(host.app, text, host.outEl, sourcePath, host);
+  } catch (err) {
+    host.outEl.removeClass("is-md");
+    host.outEl.setText(text);
+  }
+  host.outEl.scrollTop = 0;
 }
 function insertFromChat(host, mode) {
   if (!host.reply) return;

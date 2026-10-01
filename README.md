@@ -4,7 +4,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.2.0**
+Current release: **1.3.0**
 
 ## Support
 
@@ -44,6 +44,22 @@ Ribbon sparkles icon, or command palette:
 
 On a laptop, select text → right click → **Ask Grok about selection**.
 
+
+## Quick actions
+
+On the phone sheet and the desktop sidebar, four chips sit above the reply:
+
+- Summarize — current selection, or the open note
+- Rewrite — selection, or the context already loaded
+- Fix grammar — selection, or the context already loaded
+- Continue — text before the cursor
+
+A chip fills the prompt and sends. Insert, Replace, and Copy still use the raw Markdown, not the rendered HTML.
+
+## Rendered replies
+
+Finished replies render as Markdown (headings, lists, code). While tokens are arriving, the reply stays plain text. Insert and Replace write the Markdown source into the note.
+
 ## Layout
 
 Settings → Chat layout: Auto, always sidebar, or always popup sheet.
@@ -70,5 +86,6 @@ Ids and prices: https://docs.x.ai/developers/models
 
 ## Releases
 
+- **1.3.0** — Quick-action chips on the sheet and sidebar. Finished replies render as Markdown. Insert still writes Markdown.
 - **1.2.0** — Model list refresh. Default `grok-4.7`. Picker matches public API ids. Retired ids migrate. README and manifest description updated.
 - **1.1.0** — Sidebar on desktop, sheet on phone. Note and selection commands. Insert, replace, copy, new note.
