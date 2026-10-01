@@ -15,7 +15,7 @@ const VIEW_TYPE = "grok-chat-view";
 const DEFAULT_SETTINGS = {
   apiKey: "",
   apiBase: "https://api.x.ai/v1",
-  model: "grok-4",
+  model: "grok-4.7",
   customModel: "",
   temperature: 0.7,
   maxTokens: 2048,
@@ -28,14 +28,19 @@ const DEFAULT_SETTINGS = {
 };
 
 const MODELS = [
+  ["grok-4.7", "Grok 4.7 (recommended)"],
+  ["grok-4.6", "Grok 4.6"],
+  ["grok-4.5", "Grok 4.5"],
+  ["grok-4.20", "Grok 4.20"],
   ["grok-4", "Grok 4"],
-  ["grok-4-latest", "Grok 4 latest"],
-  ["grok-4.7", "Grok 4.7"],
   ["grok-3", "Grok 3"],
-  ["grok-3-mini", "Grok 3 Mini"],
-  ["grok-2", "Grok 2"],
   ["custom", "Custom model id"],
 ];
+const RETIRED_MODELS = {
+  "grok-4-latest": "grok-4.7",
+  "grok-3-mini": "grok-4.7",
+  "grok-2": "grok-4.7",
+};
 
 function clip(text, max) {
   if (!text) return "";
@@ -138,9 +143,22 @@ class GrokPlugin extends Plugin {
     if (this.abort) this.abort.abort();
     this.app.workspace.detachLeavesOfType(VIEW_TYPE);
   }
-  async loadSettings() { this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()); }
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const known = MODELS.some(([id]) => id === this.settings.model);
+    const retired = RETIRED_MODELS[this.settings.model];
+    if (retired) {
+      this.settings.model = retired;
+      await this.saveSettings();
+      new Notice("Grok model updated to " + retired + ". The old id is not in the picker.");
+    } else if (!known) {
+      this.settings.customModel = this.settings.model || "";
+      this.settings.model = "custom";
+      await this.saveSettings();
+    }
+  }
   async saveSettings() { await this.saveData(this.settings); }
-  modelId() { return this.settings.model === "custom" ? (this.settings.customModel || "grok-4").trim() : this.settings.model; }
+  modelId() { return this.settings.model === "custom" ? (this.settings.customModel || "grok-4.7").trim() : this.settings.model; }
   contextLimit() { return isPhone() ? 24000 : 80000; }
   preferredUi() {
     const mode = this.settings.chatUi || "auto";
@@ -471,7 +489,7 @@ class GrokSettingTab extends PluginSettingTab {
       text.inputEl.style.fontSize = "16px";
       text.setPlaceholder("https://api.x.ai/v1").setValue(this.plugin.settings.apiBase).onChange(async (value) => { this.plugin.settings.apiBase = value.trim() || DEFAULT_SETTINGS.apiBase; await this.plugin.saveSettings(); });
     });
-    new Setting(containerEl).setName("Model").setDesc("If a name 404s, pick Custom and type the exact id from docs.x.ai.").addDropdown((drop) => {
+    new Setting(containerEl).setName("Model").setDesc("Default is grok-4.7. Prices are billed by xAI. Grok 4.7 Fast is not on the public API. If a name 400s, pick Custom and paste the id from docs.x.ai/developers/models.").addDropdown((drop) => {
       MODELS.forEach(([id, label]) => drop.addOption(id, label));
       drop.setValue(this.plugin.settings.model);
       drop.onChange(async (value) => { this.plugin.settings.model = value; await this.plugin.saveSettings(); this.display(); });
@@ -479,7 +497,7 @@ class GrokSettingTab extends PluginSettingTab {
     if (this.plugin.settings.model === "custom") {
       new Setting(containerEl).setName("Custom model id").addText((text) => {
         text.inputEl.style.fontSize = "16px";
-        text.setPlaceholder("grok-4").setValue(this.plugin.settings.customModel).onChange(async (value) => { this.plugin.settings.customModel = value.trim(); await this.plugin.saveSettings(); });
+        text.setPlaceholder("grok-4.7").setValue(this.plugin.settings.customModel).onChange(async (value) => { this.plugin.settings.customModel = value.trim(); await this.plugin.saveSettings(); });
       });
     }
     new Setting(containerEl).setName("Temperature").setDesc("0 = strict, 1 = looser.").addSlider((slider) => {
