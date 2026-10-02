@@ -59,6 +59,36 @@ function isPhone() {
   return !!(Platform && Platform.isPhone);
 }
 
+function isMobile() {
+  return !!(Platform && Platform.isMobile);
+}
+
+function partText(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map((part) => {
+      if (!part) return "";
+      if (typeof part === "string") return part;
+      return part.text || part.content || "";
+    }).join("");
+  }
+  if (typeof value === "object") return value.text || value.content || "";
+  return "";
+}
+
+function markdownView(app) {
+  if (!app || !app.workspace) return null;
+  const active = app.workspace.getActiveViewOfType(MarkdownView);
+  if (active && active.editor) return active;
+  const leaves = app.workspace.getLeavesOfType("markdown") || [];
+  for (let i = 0; i < leaves.length; i++) {
+    const view = leaves[i] && leaves[i].view;
+    if (view && view.editor) return view;
+  }
+  return null;
+}
+
 class GrokPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
@@ -66,9 +96,11 @@ class GrokPlugin extends Plugin {
     this.pendingOpts = null;
     this.registerView(VIEW_TYPE, (leaf) => new GrokChatView(leaf, this));
     this.addRibbonIcon("sparkles", "Grok", () => {
+      const meta = this.activeNoteMeta();
       this.openChat({
-        seed: this.selectionOrEmpty(),
-        label: this.selectionOrEmpty() ? "selection" : "chat",
+        seed: meta.selection || meta.body || "",
+        label: meta.selection ? "selection" : (meta.body ? "note" : "chat"),
+        title: meta.title || "",
       });
     });
     this.addCommand({ id: "grok-open-chat", name: "Open Grok chat", callback: () => this.openChat({ seed: "", label: "chat" }) });
@@ -93,8 +125,17 @@ class GrokPlugin extends Plugin {
       id: "grok-summarize-note",
       name: "Summarize this note",
       editorCallback: (editor, view) => {
-        const sizeHint = isPhone() ? "for a phone screen: 5-8 bullets, then one-line takeaway" : "with a short heading, key bullets, and a one-line takeaway";
-        this.runQuick({ editor, view, userText: "Summarize this note " + sizeHint + ".\n\n" + this.noteBlock(view, editor.getValue()) });
+        const body = editor.getValue();
+        if (!body.trim()) { new Notice("This note is empty."); return; }
+        const sizeHint = isPhone() ? "for a phone screen: 5-8 bullets, then a one-line takeaway" : "with a short heading, key bullets, and a one-line takeaway";
+        this.openChat({
+          seed: body,
+          label: "note",
+          title: view.file ? view.file.basename : "Untitled",
+          presetPrompt: "Summarize this note " + sizeHint + ". Output only the summary.",
+          autoSend: true,
+          reasoningEffort: "low",
+        });
       },
     });
     this.addCommand({
@@ -172,8 +213,8 @@ class GrokPlugin extends Plugin {
     return view.editor.getSelection() || "";
   }
   activeNoteMeta() {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view) return { title: "", body: "", selection: "" };
+    const view = markdownView(this.app);
+    if (!view || !view.editor) return { title: "", body: "", selection: "" };
     return { title: view.file ? view.file.basename : "Untitled", body: view.editor.getValue(), selection: view.editor.getSelection() || "" };
   }
   noteBlock(view, body) {
@@ -211,7 +252,7 @@ class GrokPlugin extends Plugin {
     if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
     const notice = new Notice("Grok is thinking…", 0);
     try {
-      const text = await this.complete([{ role: "system", content: this.settings.systemPrompt }, { role: "user", content: userText }]);
+      const text = await this.complete([{ role: "system", content: this.settings.systemPrompt }, { role: "user", content: userText }], { reasoning_effort: "low" });
       notice.hide();
       if (!text) { new Notice("Grok returned an empty reply."); return; }
       this.insertText(editor, text, forceInsert || this.settings.insertMode, selection);
@@ -263,26 +304,67 @@ class GrokPlugin extends Plugin {
   }
   async complete(messages, extra) {
     const settings = this.settings;
-    const useStream = extra && extra.stream === false ? false : settings.stream;
-    const body = { model: this.modelId(), messages, temperature: Number(settings.temperature) || 0.7, max_tokens: (extra && extra.max_tokens) || Number(settings.maxTokens) || 2048, stream: !!useStream };
+    const opts = extra || {};
+    const maxOut = opts.max_tokens || Number(settings.maxTokens) || 2048;
+    const effort = opts.reasoning_effort || "";
+    const wantStream = opts.stream === false ? false : !!settings.stream;
+    const useStream = wantStream && !isMobile();
+    const body = {
+      model: this.modelId(),
+      messages,
+      temperature: Number(settings.temperature) || 0.7,
+      max_tokens: maxOut,
+      max_completion_tokens: maxOut,
+      stream: !!useStream,
+    };
+    if (effort) body.reasoning_effort = effort;
     if (this.abort) this.abort.abort();
     this.abort = new AbortController();
     const url = settings.apiBase.replace(/\/$/, "") + "/chat/completions";
-    if (!useStream) {
-      const res = await requestUrl({ url, method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + settings.apiKey }, body: JSON.stringify({ ...body, stream: false }), throw: false });
-      if (res.status < 200 || res.status >= 300) throw new Error(this.errFromBody(res.status, res.text));
-      const json = res.json;
-      const text = json && json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : "";
-      return (text || "").trim();
+    if (!useStream) return await this.completeOnce(url, body);
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + settings.apiKey }, body: JSON.stringify(body), signal: this.abort.signal });
+      if (!res.ok) { const raw = await res.text(); throw new Error(this.errFromBody(res.status, raw)); }
+      if (!res.body || !res.body.getReader) {
+        const raw = await res.text();
+        return this.textFromBody(raw);
+      }
+      return await this.readStream(res.body, opts.onToken);
+    } catch (err) {
+      if (err && err.name === "AbortError") throw err;
+      return await this.completeOnce(url, { ...body, stream: false });
     }
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + settings.apiKey }, body: JSON.stringify(body), signal: this.abort.signal });
-    if (!res.ok) { const raw = await res.text(); throw new Error(this.errFromBody(res.status, raw)); }
-    if (!res.body || !res.body.getReader) {
-      const json = await res.json();
-      const text = json && json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : "";
-      return (text || "").trim();
-    }
-    return await this.readStream(res.body, extra && extra.onToken);
+  }
+  async completeOnce(url, body) {
+    const res = await requestUrl({ url, method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + this.settings.apiKey }, body: JSON.stringify({ ...body, stream: false }), throw: false });
+    if (res.status < 200 || res.status >= 300) throw new Error(this.errFromBody(res.status, res.text));
+    return this.textFromBody(res.text || JSON.stringify(res.json || {}));
+  }
+  textFromBody(raw) {
+    let json = null;
+    try { json = JSON.parse(raw); } catch (e) { json = null; }
+    if (!json) return this.parseSse(raw).trim();
+    const message = json.choices && json.choices[0] && json.choices[0].message;
+    const text = partText(message && message.content).trim();
+    if (text) return text;
+    const reasoning = partText(message && message.reasoning_content).trim();
+    if (reasoning && !text) throw new Error("Grok used the token budget on thinking and returned no summary. Raise Max tokens in Settings → Grok, then try Summarize again.");
+    return "";
+  }
+  parseSse(raw) {
+    let out = "";
+    String(raw || "").split("\n").forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) return;
+      const data = trimmed.slice(5).trim();
+      if (!data || data === "[DONE]") return;
+      try {
+        const json = JSON.parse(data);
+        const delta = json.choices && json.choices[0] && json.choices[0].delta;
+        out += partText(delta && delta.content);
+      } catch (e) {}
+    });
+    return out;
   }
   async readStream(stream, onToken) {
     const reader = stream.getReader();
@@ -302,8 +384,9 @@ class GrokPlugin extends Plugin {
         if (data === "[DONE]") return out.trim();
         try {
           const json = JSON.parse(data);
-          const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
-          if (delta) { out += delta; if (onToken) onToken(out); }
+          const delta = json.choices && json.choices[0] && json.choices[0].delta;
+          const piece = partText(delta && delta.content);
+          if (piece) { out += piece; if (onToken) onToken(out); }
         } catch (e) {}
       }
     }
@@ -328,29 +411,29 @@ const QUICK_ACTIONS = [
 ];
 
 function contextForChip(host, action) {
-  const view = host.app.workspace.getActiveViewOfType(MarkdownView);
+  const view = markdownView(host.app);
   const editor = view ? view.editor : null;
   const title = view && view.file ? view.file.basename : (host.opts && host.opts.title) || "";
   const saved = host.opts && host.opts.seed ? host.opts.seed : "";
   if (!editor) {
     if (!saved.trim()) return null;
-    return { seed: saved, label: (host.opts && host.opts.label) || "context", title: title };
+    return { seed: saved, label: (host.opts && host.opts.label) || "context", title: title, reasoningEffort: "low" };
   }
   const sel = editor.getSelection() || "";
   if (action.needs === "cursor") {
     const before = editor.getRange({ line: 0, ch: 0 }, editor.getCursor());
     const seed = (before && before.trim()) ? before : (editor.getValue() || saved);
     if (!seed.trim()) return null;
-    return { seed: seed, label: "note", title: title || "Untitled" };
+    return { seed: seed, label: "note", title: title || "Untitled", reasoningEffort: "low" };
   }
   if (action.needs === "selection") {
     const seed = sel.trim() ? sel : saved;
     if (!seed.trim()) return null;
-    return { seed: seed, label: sel.trim() ? "selection" : ((host.opts && host.opts.label) || "context"), title: title || "Untitled" };
+    return { seed: seed, label: sel.trim() ? "selection" : ((host.opts && host.opts.label) || "context"), title: title || "Untitled", reasoningEffort: "low" };
   }
-  const seed = sel.trim() || editor.getValue() || saved;
+  const seed = (editor.getValue() || "").trim() ? editor.getValue() : saved;
   if (!seed.trim()) return null;
-  return { seed: seed, label: sel.trim() ? "selection" : "note", title: title || "Untitled" };
+  return { seed: seed, label: "note", title: title || "Untitled", reasoningEffort: "low" };
 }
 
 function runQuickChip(host, action) {
@@ -415,6 +498,10 @@ function applyChatOpts(host, opts) {
   const n = host.opts.seed ? host.opts.seed.trim().length : 0;
   if (host.ctxChip) host.ctxChip.setText(n ? label + (title ? " · " + title : "") : "no context");
   if (host.hintEl) host.hintEl.setText(n ? "Context: " + n + " characters from the note/selection." : "No note context yet. Tap Use this note or select text first.");
+  if (host.opts.autoSend) {
+    host.opts.autoSend = false;
+    setTimeout(() => host.send(), 50);
+  }
 }
 async function sendChat(host) {
   const question = (host.promptEl.value || "").trim();
@@ -433,7 +520,7 @@ async function sendChat(host) {
   }
   messages.push({ role: "user", content: question });
   try {
-    const text = await host.plugin.complete(messages, { onToken: (partial) => { host.reply = partial; setOut(host, partial); } });
+    const text = await host.plugin.complete(messages, { reasoning_effort: (host.opts && host.opts.reasoningEffort) || "", onToken: (partial) => { host.reply = partial; setOut(host, partial); } });
     host.reply = text;
     if (text) await renderReply(host, text);
     else setOut(host, "(empty reply)");
@@ -599,7 +686,7 @@ class GrokSettingTab extends PluginSettingTab {
       drop.setValue(this.plugin.settings.insertMode);
       drop.onChange(async (value) => { this.plugin.settings.insertMode = value; await this.plugin.saveSettings(); });
     });
-    new Setting(containerEl).setName("Stream replies").setDesc("Show tokens as they arrive. Turn off if a device drops streams.").addToggle((toggle) => {
+    new Setting(containerEl).setName("Stream replies").setDesc("Show tokens as they arrive on laptop. Phone always waits for the full reply — mobile drops streams.").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.stream);
       toggle.onChange(async (value) => { this.plugin.settings.stream = value; await this.plugin.saveSettings(); });
     });

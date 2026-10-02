@@ -4,7 +4,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.3.0**
+Current release: **1.3.1**
 
 ## Support
 
@@ -24,7 +24,7 @@ This plugin is not in the community store yet. Install from the release.
 
    `YourVault/.obsidian/plugins/grok-mobile/`
 
-   The folder name must be `grok-mobile`. Replace the three files if you already installed 1.1.0. Leave `data.json` alone — that file holds your API key.
+   The folder name must be `grok-mobile`. Replace the three files if you already installed an older version. Leave `data.json` alone — that file holds your API key.
 4. Fully quit Obsidian and open it again (on iOS, swipe the app away). If the plugin was already enabled, turn it off and on under Settings → Community plugins.
 5. Settings → Grok → confirm the model is **Grok 4.7**. Paste an xAI key from https://console.x.ai if you have not already.
 
@@ -44,12 +44,14 @@ Ribbon sparkles icon, or command palette:
 
 On a laptop, select text → right click → **Ask Grok about selection**.
 
+Summarize opens the sheet (phone) or sidebar (laptop) with the note already loaded and sends. Tap Insert to put the summary in the note.
+
 
 ## Quick actions
 
 On the phone sheet and the desktop sidebar, four chips sit above the reply:
 
-- Summarize — current selection, or the open note
+- Summarize — the open note (not a stray selection)
 - Rewrite — selection, or the context already loaded
 - Fix grammar — selection, or the context already loaded
 - Continue — text before the cursor
@@ -58,7 +60,7 @@ A chip fills the prompt and sends. Insert, Replace, and Copy still use the raw M
 
 ## Rendered replies
 
-Finished replies render as Markdown (headings, lists, code). While tokens are arriving, the reply stays plain text. Insert and Replace write the Markdown source into the note.
+Finished replies render as Markdown (headings, lists, code). While tokens are arriving, the reply stays plain text. Insert and Replace write the Markdown source into the note. Phone waits for the full reply; streaming is laptop-only.
 
 ## Layout
 
@@ -86,6 +88,7 @@ Ids and prices: https://docs.x.ai/developers/models
 
 ## Releases
 
+- **1.3.1** — Summarize works on phone. The sheet keeps the note even when the editor is not active. Quick actions ask Grok 4.7 for a short think (`reasoning_effort: low`) so the token budget is not spent before the summary. Phone uses a non-streaming request.
 - **1.3.0** — Quick-action chips on the sheet and sidebar. Finished replies render as Markdown. Insert still writes Markdown.
 - **1.2.0** — Model list refresh. Default `grok-4.7`. Picker matches public API ids. Retired ids migrate. README and manifest description updated.
 - **1.1.0** — Sidebar on desktop, sheet on phone. Note and selection commands. Insert, replace, copy, new note.
