@@ -10,6 +10,7 @@ const {
   requestUrl,
   MarkdownRenderer,
   normalizePath,
+  setIcon,
 } = require("obsidian");
 
 const VIEW_TYPE = "grok-chat-view";
@@ -541,10 +542,10 @@ function notesInFolder(folder, skip, limit) {
   return out;
 }
 const QUICK_ACTIONS = [
-  { id: "summarize", label: "Summarize", needs: "note", prompt: "Summarize the context. Use a short heading, 5-8 bullets, then a one-line takeaway. Output only the summary." },
-  { id: "rewrite", label: "Rewrite", needs: "selection", prompt: "Rewrite the context so it is clearer and tighter. Keep the meaning. Output only the rewrite." },
-  { id: "grammar", label: "Grammar", needs: "selection", prompt: "Fix grammar, spelling, and punctuation. Keep the author's voice. Output only the corrected text." },
-  { id: "continue", label: "Continue", needs: "cursor", prompt: "Continue this note in the same voice and structure. Output only the next paragraphs, no preamble." },
+  { id: "summarize", label: "Summarize", icon: "sparkles", needs: "note", prompt: "Summarize the context. Use a short heading, 5-8 bullets, then a one-line takeaway. Output only the summary." },
+  { id: "rewrite", label: "Rewrite", icon: "files", needs: "selection", prompt: "Rewrite the context so it is clearer and tighter. Keep the meaning. Output only the rewrite." },
+  { id: "grammar", label: "Grammar", icon: "check-circle", needs: "selection", prompt: "Fix grammar, spelling, and punctuation. Keep the author's voice. Output only the corrected text." },
+  { id: "continue", label: "Continue", icon: "arrow-right", needs: "cursor", prompt: "Continue this note in the same voice and structure. Output only the next paragraphs, no preamble." },
 ];
 
 function contextForChip(host, action) {
@@ -596,35 +597,49 @@ function insertLabel(mode) {
   const found = INSERT_MODES.find(([id]) => id === mode);
   return found ? found[1] : "Insert below cursor";
 }
+function chipButton(parent, label, icon) {
+  const btn = parent.createEl("button", { cls: "gm-chip-btn", attr: { type: "button" } });
+  const ico = btn.createSpan({ cls: "gm-ico" });
+  setIcon(ico, icon);
+  btn.createSpan({ text: label });
+  return btn;
+}
 function mountChat(root, host) {
   root.empty();
   const wrap = root.createDiv({ cls: "gm-wrap" });
+  if (host.close) wrap.createDiv({ cls: "gm-handle" });
   const head = wrap.createDiv({ cls: "gm-head" });
-  head.createEl("h2", { text: "Grok" });
-  head.createSpan({ cls: "gm-kicker", text: isPhone() ? "phone" : Platform && Platform.isMobile ? "tablet" : "laptop" });
-  const meta = wrap.createDiv({ cls: "gm-meta" });
-  host.modelChip = meta.createSpan({ cls: "gm-chip", text: host.plugin.modelId() });
-  host.ctxChip = meta.createSpan({ cls: "gm-chip", text: "no context" });
-  host.promptEl = wrap.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "Ask Grok…  Ctrl/Cmd+Enter to send", rows: "4" } });
-  host.hintEl = wrap.createDiv({ cls: "gm-hint" });
+  const title = head.createDiv({ cls: "gm-title" });
+  const logo = title.createSpan({ cls: "gm-logo" });
+  setIcon(logo, "sparkles");
+  title.createEl("h2", { text: "Grok Notes" });
+  host.modelChip = head.createSpan({ cls: "gm-chip", text: host.plugin.modelId() });
+  if (host.close) {
+    const closeBtn = head.createEl("button", { cls: "gm-close", attr: { type: "button", "aria-label": "Close" } });
+    setIcon(closeBtn, "x");
+    closeBtn.addEventListener("click", () => host.close());
+  }
   const chips = wrap.createDiv({ cls: "gm-chips" });
   host.chipBtns = [];
   QUICK_ACTIONS.forEach((action) => {
-    const btn = chips.createEl("button", { text: action.label, cls: "gm-chip-btn", attr: { type: "button" } });
+    const btn = chipButton(chips, action.label, action.icon || "sparkles");
     btn.addEventListener("click", () => runQuickChip(host, action));
     host.chipBtns.push(btn);
   });
-  const imagineBtn = chips.createEl("button", { text: "Imagine", cls: "gm-chip-btn", attr: { type: "button" } });
+  const imagineBtn = chipButton(chips, "Imagine", "wand");
   imagineBtn.addEventListener("click", () => host.plugin.openImagine(host.opts && host.opts.seed ? "note" : "new"));
   host.chipBtns.push(imagineBtn);
-  const noteChip = chips.createEl("button", { text: "Use note", cls: "gm-chip-btn", attr: { type: "button" } });
+  const noteChip = chipButton(chips, "Use note", "file");
   noteChip.addEventListener("click", () => host.grabNote());
   host.chipBtns.push(noteChip);
+  host.hintEl = wrap.createDiv({ cls: "gm-hint" });
   host.histEl = wrap.createDiv({ cls: "gm-history" });
-  host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
-  const modeRow = wrap.createDiv({ cls: "gm-mode-row" });
-  modeRow.createSpan({ cls: "gm-kicker", text: "Insert mode" });
-  host.modeEl = modeRow.createEl("select", { cls: "gm-mode-select" });
+  wrap.createDiv({ cls: "gm-kicker gm-response-label", text: "Assistant response" });
+  host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "A reply will show here." });
+  const actions = wrap.createDiv({ cls: "gm-actions" });
+  const insertWrap = actions.createDiv({ cls: "gm-insert-wrap" });
+  host.insertBtn = insertWrap.createEl("button", { text: "Insert", cls: "gm-insert" });
+  host.modeEl = insertWrap.createEl("select", { cls: "gm-mode-select", attr: { "aria-label": "Insert mode" } });
   INSERT_MODES.forEach(([id, label]) => {
     const opt = host.modeEl.createEl("option", { text: label });
     opt.value = id;
@@ -633,21 +648,29 @@ function mountChat(root, host) {
   host.modeEl.addEventListener("change", async () => {
     host.plugin.settings.insertMode = host.modeEl.value;
     await host.plugin.saveSettings();
-    if (host.insertBtn) host.insertBtn.setText(insertLabel(host.modeEl.value));
   });
-  const actions = wrap.createDiv({ cls: "gm-actions" });
-  host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
-  host.stopBtn = actions.createEl("button", { text: "Stop" });
-  host.insertBtn = actions.createEl("button", { text: insertLabel(host.plugin.settings.insertMode), cls: "gm-wide" });
-  host.stopBtn.disabled = true;
+  host.replaceBtn = actions.createEl("button", { cls: "gm-ghost", text: "Replace" });
+  const replaceIco = host.replaceBtn.createSpan({ cls: "gm-ico" });
+  setIcon(replaceIco, "pencil");
+  host.copyBtn = actions.createEl("button", { cls: "gm-ghost", text: "Copy" });
+  const copyIco = host.copyBtn.createSpan({ cls: "gm-ico" });
+  setIcon(copyIco, "copy");
+  host.histBtn = actions.createEl("button", { cls: "gm-ghost gm-mini", text: "History" });
+  host.clearBtn = actions.createEl("button", { cls: "gm-ghost gm-mini", text: "Clear" });
   host.insertBtn.disabled = true;
-  host.sendBtn.addEventListener("click", () => host.send());
-  host.stopBtn.addEventListener("click", () => host.stop());
+  host.replaceBtn.disabled = true;
+  host.copyBtn.disabled = true;
   host.insertBtn.addEventListener("click", () => host.insert(host.modeEl ? host.modeEl.value : host.plugin.settings.insertMode));
-  host.histBtn = actions.createEl("button", { text: "Add history to note" });
-  host.clearBtn = actions.createEl("button", { text: "Clear history" });
+  host.replaceBtn.addEventListener("click", () => host.insert("replace"));
+  host.copyBtn.addEventListener("click", () => host.insert("copy"));
   host.histBtn.addEventListener("click", () => host.plugin.insertHistory());
   host.clearBtn.addEventListener("click", async () => { await host.plugin.clearHistory(); renderHistory(host); });
+  const compose = wrap.createDiv({ cls: "gm-compose" });
+  host.promptEl = compose.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "Ask Grok anything about this note...", rows: "1" } });
+  host.sendBtn = compose.createEl("button", { cls: "gm-send", attr: { type: "button", "aria-label": "Send" } });
+  setIcon(host.sendBtn, "send");
+  host.stopBtn = host.sendBtn;
+  host.sendBtn.addEventListener("click", () => host.busy ? host.stop() : host.send());
   host.promptEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); host.send(); }
   });
@@ -676,8 +699,9 @@ async function sendChat(host) {
   if (!host.plugin.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
   if (host.busy) return;
   host.busy = true;
-  host.sendBtn.disabled = true;
-  host.stopBtn.disabled = false;
+  host.sendBtn.disabled = false;
+  host.sendBtn.addClass("is-busy");
+  setIcon(host.sendBtn, "square");
   setChipsEnabled(host, false);
   setOut(host, "Thinking…");
   const messages = [{ role: "system", content: host.plugin.settings.systemPrompt }];
@@ -700,13 +724,16 @@ async function sendChat(host) {
     } else setOut(host, "(empty reply)");
     const ok = !!text;
     host.insertBtn.disabled = !ok;
+    if (host.replaceBtn) host.replaceBtn.disabled = !ok;
+    if (host.copyBtn) host.copyBtn.disabled = !ok;
   } catch (err) {
     if (err && err.name === "AbortError") setOut(host, (host.reply || "") + "\n\n[stopped]");
     else setOut(host, err.message || String(err), "error");
   } finally {
     host.busy = false;
     host.sendBtn.disabled = false;
-    host.stopBtn.disabled = true;
+    host.sendBtn.removeClass("is-busy");
+    setIcon(host.sendBtn, "send");
     setChipsEnabled(host, true);
   }
 }
@@ -721,7 +748,6 @@ function renderHistory(host) {
   const turns = host.plugin.turns();
   host.histEl.empty();
   if (!turns.length) {
-    host.histEl.createDiv({ cls: "gm-hint", text: "No chat history yet." });
     if (host.histBtn) host.histBtn.disabled = true;
     return;
   }
@@ -784,6 +810,7 @@ class GrokChatModal extends Modal {
   }
   onOpen() {
     this.modalEl.addClass("gm-modal");
+    this.modalEl.addClass("gm-sheet");
     mountChat(this.contentEl, this);
     applyChatOpts(this, this.opts);
     setTimeout(() => this.promptEl.focus(), 30);

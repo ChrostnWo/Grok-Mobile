@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.7
+
+The sheet and sidebar follow the Grok Notes layout. Title with sparkle, 3 by 2 icon actions, assistant response, Insert / Replace / Copy, and the prompt with a send button at the bottom.
+
 ## 1.4.6
 
 Chat history is kept in the vault plugin data and shown in the sidebar and sheet. Add history to note inserts the thread as Markdown. Clear history removes it. The last 12 turns are sent with the next message.
