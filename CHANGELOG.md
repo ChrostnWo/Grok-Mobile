@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.9
+
+The sidebar and phone sheet have a note title field. Title asks Grok for a name. Rename applies that name to the open note, keeping the folder.
+
 ## 1.4.8
 
 Tag suggests 3 to 6 tags from the open note and writes the new ones into YAML frontmatter. Existing tags are kept. Command: Tag this note.

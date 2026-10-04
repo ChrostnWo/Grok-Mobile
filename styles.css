@@ -440,3 +440,25 @@
 .gm-send.is-busy {
   background: var(--background-modifier-error);
 }
+
+.gm-title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.gm-title-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.gm-rename {
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-weight: 700;
+}

@@ -174,6 +174,7 @@ class GrokPlugin extends Plugin {
     this.addCommand({ id: "grok-insert-history", name: "Insert Grok chat history into note", callback: () => this.insertHistory() });
     this.addCommand({ id: "grok-clear-history", name: "Clear Grok chat history", callback: () => this.clearHistory() });
     this.addCommand({ id: "grok-tag-note", name: "Tag this note", editorCallback: (editor, view) => this.tagNote(editor, view) });
+    this.addCommand({ id: "grok-title-note", name: "Title this note", editorCallback: (editor, view) => this.suggestTitle(editor, view) });
     this.addCommand({ id: "grok-imagine-new", name: "Imagine something new", callback: () => this.openImagine("new") });
     this.addCommand({ id: "grok-imagine-note", name: "Imagine from this note", callback: () => this.openImagine("note") });
     this.addCommand({ id: "grok-imagine-folder", name: "Imagine from this folder", callback: () => this.openImagine("folder") });
@@ -241,6 +242,34 @@ class GrokPlugin extends Plugin {
     const editor = view ? view.editor : null;
     this.insertText(editor, md, editor ? (this.settings.insertMode || "below") : "new-note");
     new Notice(editor ? "Chat history added to the note." : "Opened a note with the chat history.");
+  }
+  async suggestTitle(editor, view, host) {
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!editor) { new Notice("Open a markdown note first."); return; }
+    const body = editor.getValue();
+    if (!body.trim()) { new Notice("This note is empty."); return; }
+    if (host) setOut(host, "Suggesting a title…");
+    const text = await this.complete([
+      { role: "system", content: "Reply with one note title only. No quotes, no extension, no explanation. At most 8 words." },
+      { role: "user", content: clip(body, this.contextLimit()) },
+    ], { stream: false, reasoning_effort: "low", max_tokens: 40 });
+    const title = cleanTitle(text);
+    if (!title) { new Notice("Grok did not return a title."); return; }
+    if (host && host.titleEl) host.titleEl.value = title;
+    if (host) setOut(host, "Title: " + title + "\n\nTap Rename to apply it.");
+    return title;
+  }
+  async applyTitle(title, view) {
+    const file = view && view.file;
+    const clean = cleanTitle(title);
+    if (!file) { new Notice("Open a markdown note first."); return; }
+    if (!clean) { new Notice("Type a title first."); return; }
+    const parent = file.parent && file.parent.path && file.parent.path !== "/" ? file.parent.path + "/" : "";
+    const path = parent + clean + ".md";
+    if (path === file.path) { new Notice("That is already the title."); return; }
+    if (this.app.vault.getAbstractFileByPath(path)) { new Notice("A note with that title already exists."); return; }
+    await this.app.fileManager.renameFile(file, path);
+    new Notice("Renamed note to " + clean);
   }
   async tagNote(editor, view, host) {
     if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
@@ -656,6 +685,14 @@ function mountChat(root, host) {
   const tagChip = chipButton(chips, "Tag", "tag");
   tagChip.addEventListener("click", () => tagFromHost(host));
   host.chipBtns.push(tagChip);
+  const titleChip = chipButton(chips, "Title", "heading");
+  titleChip.addEventListener("click", () => titleFromHost(host));
+  host.chipBtns.push(titleChip);
+  const titleRow = wrap.createDiv({ cls: "gm-title-row" });
+  host.titleEl = titleRow.createEl("input", { cls: "gm-title-input", attr: { type: "text", placeholder: "Note title" } });
+  host.titleEl.value = (host.opts && host.opts.title) || "";
+  host.renameBtn = titleRow.createEl("button", { text: "Rename", cls: "gm-rename" });
+  host.renameBtn.addEventListener("click", () => renameFromHost(host));
   host.hintEl = wrap.createDiv({ cls: "gm-hint" });
   host.histEl = wrap.createDiv({ cls: "gm-history" });
   wrap.createDiv({ cls: "gm-kicker gm-response-label", text: "Assistant response" });
@@ -708,6 +745,7 @@ function applyChatOpts(host, opts) {
   const title = host.opts.title || "";
   const n = host.opts.seed ? host.opts.seed.trim().length : 0;
   if (host.ctxChip) host.ctxChip.setText(n ? label + (title ? " · " + title : "") : "no context");
+  if (host.titleEl && title && !host.titleEl.value) host.titleEl.value = title;
   if (host.hintEl) host.hintEl.setText(n ? "Context: " + n + " characters from the note/selection." : "No note context yet. Tap Use this note or select text first.");
   renderHistory(host);
   const last = host.plugin.turns().filter((t) => t.role === "assistant").slice(-1)[0];
@@ -816,6 +854,24 @@ function insertFromChat(host, mode) {
   const editor = view ? view.editor : null;
   host.plugin.insertText(editor, host.reply, mode);
   if (typeof host.afterInsert === "function") host.afterInsert(mode);
+}
+function cleanTitle(text) {
+  return String(text || "").split("\n")[0].replace(/^[#*"'\s]+|[#*"'\s.]+$/g, "").replace(/[\\/:*?"<>|]/g, "").replace(/\.md$/i, "").trim().slice(0, 80);
+}
+async function titleFromHost(host) {
+  if (host.busy) return;
+  const view = markdownView(host.app);
+  const editor = view ? view.editor : null;
+  host.busy = true;
+  setChipsEnabled(host, false);
+  try { await host.plugin.suggestTitle(editor, view, host); }
+  catch (err) { new Notice(err.message || String(err)); }
+  finally { host.busy = false; setChipsEnabled(host, true); }
+}
+async function renameFromHost(host) {
+  const view = markdownView(host.app);
+  try { await host.plugin.applyTitle(host.titleEl ? host.titleEl.value : "", view); }
+  catch (err) { new Notice(err.message || String(err)); }
 }
 function parseTags(text) {
   const out = [];
