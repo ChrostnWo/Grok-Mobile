@@ -4,7 +4,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.5.1**
+Current release: **1.5.2**
 
 ## Interface
 
@@ -32,6 +32,8 @@ These are interface mockups of the 1.4.5 layout, not screenshots from a vault.
 - [Support](SUPPORT.md)
 
 ## Support
+
+[![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/chrostn)
 
 If this plugin is useful, you can [buy me a coffee](https://buymeacoffee.com/chrostn).
 

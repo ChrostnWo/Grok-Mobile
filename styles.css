@@ -498,3 +498,27 @@
 .gm-sheet {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+.gm-coffee {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 12px;
+  background: #ffdd00;
+  color: #111;
+  font-weight: 800;
+  text-decoration: none;
+  padding: 0 12px;
+}
+
+.gm-coffee svg {
+  width: 22px;
+  height: 22px;
+}
+
+.gm-coffee:hover {
+  filter: brightness(0.95);
+  color: #111;
+}

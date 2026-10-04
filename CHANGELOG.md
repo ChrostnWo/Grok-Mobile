@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.2
+
+A yellow Buy Me a Coffee button with the cup logo sits under the title on the sidebar and phone sheet, and at the top of Settings → Grok. It opens https://buymeacoffee.com/chrostn.
+
 ## 1.5.1
 
 On iPhone the keyboard no longer opens by itself. Done hides it. Send hides it. Tapping the sheet outside a field hides it. The sheet moves up while the keyboard is open.

@@ -1,7 +1,7 @@
 {
   "id": "grok-mobile",
   "name": "Grok",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "minAppVersion": "1.5.0",
   "description": "Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on phone. Chat, quick actions, and Imagine from the note or folder. Uses the xAI API \u2014 no CLI.",
   "author": "Chrostn",
