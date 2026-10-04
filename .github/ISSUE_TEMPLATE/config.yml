@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Install and update
+    url: https://github.com/ChrostnWo/Grok-Mobile/blob/main/docs/install.md
+    about: Manual install, BRAT, and how to update without wiping the API key
+  - name: Troubleshooting
+    url: https://github.com/ChrostnWo/Grok-Mobile/blob/main/docs/troubleshooting.md
+    about: Phone sheet, retired model ids, and Imagine failures

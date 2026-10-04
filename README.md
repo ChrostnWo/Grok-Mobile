@@ -6,6 +6,21 @@ Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet
 
 Current release: **1.4.0**
 
+## Docs
+
+- [Install and update](docs/install.md)
+- [Phone and laptop](docs/phone-and-laptop.md)
+- [Commands](docs/commands.md)
+- [Quick actions](docs/quick-actions.md)
+- [Imagine](docs/imagine.md)
+- [Models](docs/models.md)
+- [Privacy](docs/privacy.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [FAQ](docs/faq.md)
+- [For the Obsidian community](docs/for-the-community.md)
+- [Changelog](CHANGELOG.md)
+- [Support](SUPPORT.md)
+
 ## Support
 
 If this plugin is useful, you can [buy me a coffee](https://buymeacoffee.com/chrostn).
@@ -16,7 +31,7 @@ This plugin sends the text you choose (selection, note, prompt, or a short folde
 
 ## Install or update
 
-This plugin is not in the community store yet. Install from the release.
+This plugin is not in the community store yet. Install from the release. Full steps: [docs/install.md](docs/install.md).
 
 1. Open the latest release: https://github.com/ChrostnWo/Grok-Mobile/releases/latest
 2. Download `main.js`, `manifest.json`, and `styles.css` (or the release zip, then unzip).
@@ -74,11 +89,11 @@ Command palette, or the **Imagine** chip on the sheet:
 
 Vault sample uses the 12 newest notes, not every file. Folder uses up to 8 notes in the current folder. Draft from source asks the chat model for one image prompt, which you can edit. Generate calls `grok-imagine-image-2.0` and bills one image. Save writes a jpg into the `Grok` folder. Save and embed drops the image link into the open note.
 
-Settings → Grok → Imagine model, aspect, and folder.
+Settings → Grok → Imagine model, aspect, and folder. Details: [docs/imagine.md](docs/imagine.md).
 
 ## Layout
 
-Settings → Chat layout: Auto, always sidebar, or always popup sheet.
+Settings → Chat layout: Auto, always sidebar, or always popup sheet. See [phone and laptop](docs/phone-and-laptop.md).
 
 ## Models
 
@@ -102,6 +117,9 @@ Ids and prices: https://docs.x.ai/developers/models
 
 ## Releases
 
+Full notes: [CHANGELOG.md](CHANGELOG.md).
+
+- **1.4.0** — Imagine from a prompt, note, folder, or 12-note vault sample. Saves a jpg into the vault and can embed it.
 - **1.3.1** — Summarize works on phone. The sheet keeps the note even when the editor is not active. Quick actions ask Grok 4.7 for a short think (`reasoning_effort: low`) so the token budget is not spent before the summary. Phone uses a non-streaming request.
 - **1.3.0** — Quick-action chips on the sheet and sidebar. Finished replies render as Markdown. Insert still writes Markdown.
 - **1.2.0** — Model list refresh. Default `grok-4.7`. Picker matches public API ids. Retired ids migrate. README and manifest description updated.
