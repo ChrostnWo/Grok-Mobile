@@ -9,6 +9,7 @@ const {
   Platform,
   requestUrl,
   MarkdownRenderer,
+  normalizePath,
 } = require("obsidian");
 
 const VIEW_TYPE = "grok-chat-view";
@@ -26,6 +27,9 @@ const DEFAULT_SETTINGS = {
   includeTitle: true,
   stream: true,
   chatUi: "auto",
+  imageModel: "grok-imagine-image-2.0",
+  imageAspect: "1:1",
+  imageFolder: "Grok",
 };
 
 const MODELS = [
@@ -165,6 +169,10 @@ class GrokPlugin extends Plugin {
       },
     });
     this.addCommand({ id: "grok-test-key", name: "Test xAI API key", callback: () => this.testKey() });
+    this.addCommand({ id: "grok-imagine-new", name: "Imagine something new", callback: () => this.openImagine("new") });
+    this.addCommand({ id: "grok-imagine-note", name: "Imagine from this note", callback: () => this.openImagine("note") });
+    this.addCommand({ id: "grok-imagine-folder", name: "Imagine from this folder", callback: () => this.openImagine("folder") });
+    this.addCommand({ id: "grok-imagine-vault", name: "Imagine from vault sample", callback: () => this.openImagine("vault") });
     this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor) => {
       const sel = editor.getSelection();
       if (!sel || !sel.trim()) return;
@@ -392,6 +400,90 @@ class GrokPlugin extends Plugin {
     }
     return out.trim();
   }
+  openImagine(source) {
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    new ImagineModal(this.app, this, source || "new").open();
+  }
+  async gatherImagineContext(source) {
+    const folder = (this.settings.imageFolder || "Grok").replace(/^\/+|\/+$/g, "") || "Grok";
+    if (source === "new") return "";
+    if (source === "note") {
+      const meta = this.activeNoteMeta();
+      const body = meta.selection || meta.body || "";
+      if (!body.trim()) return "";
+      const title = meta.title ? "# " + meta.title + "\n\n" : "";
+      return clip(title + body, 6000);
+    }
+    const active = this.app.workspace.getActiveFile();
+    let files = [];
+    if (source === "folder") {
+      const parent = active ? active.parent : null;
+      files = parent ? parent.children.filter((f) => f.extension === "md") : [];
+      if (!files.length && active && active.extension === "md") files = [active];
+    } else {
+      files = this.app.vault.getMarkdownFiles().filter((f) => f.path !== folder && !f.path.startsWith(folder + "/"));
+      files.sort((a, b) => ((b.stat && b.stat.mtime) || 0) - ((a.stat && a.stat.mtime) || 0));
+      files = files.slice(0, 12);
+    }
+    files = files.slice(0, source === "folder" ? 8 : 12);
+    const parts = [];
+    for (const file of files) {
+      const raw = await this.app.vault.cachedRead(file);
+      parts.push("## " + file.basename + "\n" + clip(raw, 500));
+    }
+    return clip(parts.join("\n\n"), 7000);
+  }
+  async imagePromptFromContext(context, extra) {
+    const ask = (extra || "").trim();
+    const user = (ask ? "User direction: " + ask + "\n\n" : "") + "Source notes:\n\n" + context;
+    return await this.complete([
+      { role: "system", content: "Turn the notes into one image prompt for Grok Imagine. Concrete scene, subject, mood, and style. No title, no quotes, no explanation." },
+      { role: "user", content: user },
+    ], { stream: false, max_tokens: 400, reasoning_effort: "low" });
+  }
+  async generateImage(prompt) {
+    const settings = this.settings;
+    const body = {
+      model: settings.imageModel || "grok-imagine-image-2.0",
+      prompt: String(prompt || "").slice(0, 4000),
+      n: 1,
+      response_format: "b64_json",
+    };
+    if (settings.imageAspect) body.aspect_ratio = settings.imageAspect;
+    const url = settings.apiBase.replace(/\/$/, "") + "/images/generations";
+    let res = await requestUrl({ url, method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + settings.apiKey }, body: JSON.stringify(body), throw: false });
+    if ((res.status < 200 || res.status >= 300) && body.aspect_ratio) {
+      delete body.aspect_ratio;
+      res = await requestUrl({ url, method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + settings.apiKey }, body: JSON.stringify(body), throw: false });
+    }
+    if (res.status < 200 || res.status >= 300) throw new Error(this.errFromBody(res.status, res.text));
+    const json = res.json || {};
+    const item = (json.data && json.data[0]) || {};
+    const b64 = item.b64_json || "";
+    if (!b64) throw new Error("Imagine returned no image. Check the image model id in Settings → Grok.");
+    return { b64, revised: item.revised_prompt || "" };
+  }
+  async saveImagineFile(b64) {
+    const folder = normalizePath((this.settings.imageFolder || "Grok").replace(/^\/+|\/+$/g, "") || "Grok");
+    if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    const stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+    const path = normalizePath(folder + "/imagine-" + stamp + ".jpg");
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return await this.app.vault.createBinary(path, bytes.buffer);
+  }
+  embedImagine(file) {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view || !view.file) return false;
+    const link = this.app.fileManager.generateMarkdownLink(file, view.file.path);
+    const editor = view.editor;
+    const cursor = editor.getCursor("to");
+    editor.replaceRange("\n\n" + link + "\n", { line: cursor.line, ch: editor.getLine(cursor.line).length });
+    return true;
+  }
   errFromBody(status, raw) {
     let detail = raw || "";
     try { const j = JSON.parse(raw); detail = (j.error && (j.error.message || j.error)) || j.message || raw; } catch (e) {}
@@ -466,6 +558,9 @@ function mountChat(root, host) {
     btn.addEventListener("click", () => runQuickChip(host, action));
     host.chipBtns.push(btn);
   });
+  const imagineBtn = chips.createEl("button", { text: "Imagine", cls: "gm-chip-btn", attr: { type: "button" } });
+  imagineBtn.addEventListener("click", () => host.plugin.openImagine(host.opts && host.opts.seed ? "note" : "new"));
+  host.chipBtns.push(imagineBtn);
   host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
   const actions = wrap.createDiv({ cls: "gm-actions" });
   host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
@@ -701,11 +796,127 @@ class GrokSettingTab extends PluginSettingTab {
       area.setValue(this.plugin.settings.systemPrompt);
       area.onChange(async (value) => { this.plugin.settings.systemPrompt = value; await this.plugin.saveSettings(); });
     });
+    new Setting(containerEl).setName("Imagine model").setDesc("Image calls use /images/generations and are billed per image. grok-imagine-image-2.0 is the current Imagine model.").addDropdown((drop) => {
+      drop.addOption("grok-imagine-image-2.0", "Grok Imagine 2.0");
+      drop.addOption("grok-imagine-image", "Grok Imagine");
+      drop.addOption("grok-2-image", "Grok 2 Image");
+      drop.setValue(this.plugin.settings.imageModel || "grok-imagine-image-2.0");
+      drop.onChange(async (value) => { this.plugin.settings.imageModel = value; await this.plugin.saveSettings(); });
+    });
+    new Setting(containerEl).setName("Imagine aspect").setDesc("Used when the model accepts it. Phone notes often look better at 1:1 or 3:4.").addDropdown((drop) => {
+      [["1:1", "1:1"], ["16:9", "16:9"], ["9:16", "9:16"], ["4:3", "4:3"], ["3:4", "3:4"]].forEach(([id, label]) => drop.addOption(id, label));
+      drop.setValue(this.plugin.settings.imageAspect || "1:1");
+      drop.onChange(async (value) => { this.plugin.settings.imageAspect = value; await this.plugin.saveSettings(); });
+    });
+    new Setting(containerEl).setName("Imagine folder").setDesc("Vault folder for saved jpg files.").addText((text) => {
+      text.inputEl.style.fontSize = "16px";
+      text.setPlaceholder("Grok").setValue(this.plugin.settings.imageFolder || "Grok").onChange(async (value) => { this.plugin.settings.imageFolder = value.trim() || "Grok"; await this.plugin.saveSettings(); });
+    });
     new Setting(containerEl).setName("Test connection").setDesc("Sends a tiny ping to api.x.ai.").addButton((btn) => {
       btn.setButtonText("Test API key");
       btn.setCta();
       btn.onClick(() => this.plugin.testKey());
     });
+  }
+}
+class ImagineModal extends Modal {
+  constructor(app, plugin, source) {
+    super(app);
+    this.plugin = plugin;
+    this.source = source || "new";
+    this.b64 = "";
+    this.file = null;
+    this.busy = false;
+  }
+  onOpen() {
+    this.modalEl.addClass("gm-modal");
+    const root = this.contentEl;
+    root.empty();
+    const wrap = root.createDiv({ cls: "gm-wrap" });
+    wrap.createEl("h2", { text: "Imagine" });
+    wrap.createDiv({ cls: "gm-hint", text: "New prompt, or a picture from the note, folder, or a short vault sample. Images are billed by xAI." });
+    const sourceRow = wrap.createDiv({ cls: "gm-imagine-row" });
+    this.sourceEl = sourceRow.createEl("select", { cls: "gm-imagine-select" });
+    [["new", "Something new"], ["note", "This note"], ["folder", "This folder"], ["vault", "Vault sample"]].forEach(([id, label]) => {
+      const opt = this.sourceEl.createEl("option", { text: label });
+      opt.value = id;
+    });
+    this.sourceEl.value = this.source;
+    this.promptEl = wrap.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "A quiet desk at night, one lamp, notebook open…", rows: "4" } });
+    this.statusEl = wrap.createDiv({ cls: "gm-hint", text: "Vault sample uses the 12 newest notes, not the whole vault." });
+    this.previewEl = wrap.createDiv({ cls: "gm-imagine-preview" });
+    const actions = wrap.createDiv({ cls: "gm-actions" });
+    this.draftBtn = actions.createEl("button", { text: "Draft from source" });
+    this.goBtn = actions.createEl("button", { text: "Generate", cls: "mod-cta" });
+    this.saveBtn = actions.createEl("button", { text: "Save to vault" });
+    this.embedBtn = actions.createEl("button", { text: "Save and embed" });
+    this.saveBtn.disabled = true;
+    this.embedBtn.disabled = true;
+    this.draftBtn.addEventListener("click", () => this.draft());
+    this.goBtn.addEventListener("click", () => this.generate());
+    this.saveBtn.addEventListener("click", () => this.save(false));
+    this.embedBtn.addEventListener("click", () => this.save(true));
+    if (this.source !== "new") this.draft();
+  }
+  setStatus(text) { if (this.statusEl) this.statusEl.setText(text); }
+  async draft() {
+    if (this.busy) return;
+    const source = this.sourceEl.value;
+    if (source === "new") { this.setStatus("Type a prompt, then Generate."); return; }
+    this.busy = true;
+    this.draftBtn.disabled = true;
+    this.setStatus("Reading " + source + "…");
+    try {
+      const context = await this.plugin.gatherImagineContext(source);
+      if (!context.trim()) { this.setStatus("Nothing to read. Open a note, or type a prompt."); return; }
+      this.setStatus("Writing an image prompt…");
+      const prompt = await this.plugin.imagePromptFromContext(context, this.promptEl.value);
+      if (prompt) this.promptEl.value = prompt.trim();
+      this.setStatus("Prompt ready. Generate spends one image.");
+    } catch (err) {
+      this.setStatus(err.message || String(err));
+    } finally {
+      this.busy = false;
+      this.draftBtn.disabled = false;
+    }
+  }
+  async generate() {
+    if (this.busy) return;
+    const prompt = (this.promptEl.value || "").trim();
+    if (!prompt) { this.setStatus("Add a prompt first."); return; }
+    this.busy = true;
+    this.goBtn.disabled = true;
+    this.setStatus("Generating…");
+    try {
+      const result = await this.plugin.generateImage(prompt);
+      this.b64 = result.b64;
+      this.file = null;
+      this.previewEl.empty();
+      this.previewEl.createEl("img", { attr: { src: "data:image/jpeg;base64," + this.b64, alt: "Imagine preview" } });
+      this.saveBtn.disabled = false;
+      this.embedBtn.disabled = false;
+      this.setStatus(result.revised ? "Ready. Model note: " + result.revised.slice(0, 140) : "Ready. Save it into the vault.");
+    } catch (err) {
+      this.setStatus(err.message || String(err));
+    } finally {
+      this.busy = false;
+      this.goBtn.disabled = false;
+    }
+  }
+  async save(embed) {
+    if (!this.b64) return;
+    try {
+      if (!this.file) this.file = await this.plugin.saveImagineFile(this.b64);
+      let extra = "Saved " + this.file.path;
+      if (embed) {
+        const ok = this.plugin.embedImagine(this.file);
+        extra = ok ? "Embedded in the open note." : "Saved. Open a note to embed it.";
+      }
+      this.setStatus(extra);
+      new Notice(extra);
+    } catch (err) {
+      this.setStatus(err.message || String(err));
+    }
   }
 }
 module.exports = GrokPlugin;

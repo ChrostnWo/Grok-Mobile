@@ -211,3 +211,29 @@
   border-radius: 8px;
   background: var(--background-primary);
 }
+
+.gm-imagine-row {
+  display: flex;
+}
+
+.gm-imagine-select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+
+.gm-imagine-preview {
+  min-height: 120px;
+  border-radius: 10px;
+  background: var(--background-secondary);
+  overflow: hidden;
+}
+
+.gm-imagine-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 46vh;
+  object-fit: contain;
+}

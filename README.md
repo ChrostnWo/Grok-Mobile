@@ -4,7 +4,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.3.1**
+Current release: **1.4.0**
 
 ## Support
 
@@ -12,7 +12,7 @@ If this plugin is useful, you can [buy me a coffee](https://buymeacoffee.com/chr
 
 ## Privacy and network use
 
-This plugin sends the text you choose (selection, note, or prompt) to **xAI** at `https://api.x.ai` when you run a command or tap Send. It does not work without an xAI API key from https://console.x.ai . xAI bills API usage separately. The key is stored only in this vault's plugin settings (`data.json`). Do not commit that file.
+This plugin sends the text you choose (selection, note, prompt, or a short folder/vault sample) to **xAI** at `https://api.x.ai` when you run a command, tap Send, or generate an image. It does not work without an xAI API key from https://console.x.ai . xAI bills API usage separately. The key is stored only in this vault's plugin settings (`data.json`). Do not commit that file.
 
 ## Install or update
 
@@ -61,6 +61,20 @@ A chip fills the prompt and sends. Insert, Replace, and Copy still use the raw M
 ## Rendered replies
 
 Finished replies render as Markdown (headings, lists, code). While tokens are arriving, the reply stays plain text. Insert and Replace write the Markdown source into the note. Phone waits for the full reply; streaming is laptop-only.
+
+
+## Imagine
+
+Command palette, or the **Imagine** chip on the sheet:
+
+- Imagine something new
+- Imagine from this note
+- Imagine from this folder
+- Imagine from vault sample
+
+Vault sample uses the 12 newest notes, not every file. Folder uses up to 8 notes in the current folder. Draft from source asks the chat model for one image prompt, which you can edit. Generate calls `grok-imagine-image-2.0` and bills one image. Save writes a jpg into the `Grok` folder. Save and embed drops the image link into the open note.
+
+Settings → Grok → Imagine model, aspect, and folder.
 
 ## Layout
 
