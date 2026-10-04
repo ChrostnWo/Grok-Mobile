@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.8
+
+Tag suggests 3 to 6 tags from the open note and writes the new ones into YAML frontmatter. Existing tags are kept. Command: Tag this note.
+
 ## 1.4.7
 
 The sheet and sidebar follow the Grok Notes layout. Title with sparkle, 3 by 2 icon actions, assistant response, Insert / Replace / Copy, and the prompt with a send button at the bottom.

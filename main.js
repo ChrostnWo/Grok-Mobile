@@ -173,6 +173,7 @@ class GrokPlugin extends Plugin {
     this.addCommand({ id: "grok-test-key", name: "Test xAI API key", callback: () => this.testKey() });
     this.addCommand({ id: "grok-insert-history", name: "Insert Grok chat history into note", callback: () => this.insertHistory() });
     this.addCommand({ id: "grok-clear-history", name: "Clear Grok chat history", callback: () => this.clearHistory() });
+    this.addCommand({ id: "grok-tag-note", name: "Tag this note", editorCallback: (editor, view) => this.tagNote(editor, view) });
     this.addCommand({ id: "grok-imagine-new", name: "Imagine something new", callback: () => this.openImagine("new") });
     this.addCommand({ id: "grok-imagine-note", name: "Imagine from this note", callback: () => this.openImagine("note") });
     this.addCommand({ id: "grok-imagine-folder", name: "Imagine from this folder", callback: () => this.openImagine("folder") });
@@ -240,6 +241,26 @@ class GrokPlugin extends Plugin {
     const editor = view ? view.editor : null;
     this.insertText(editor, md, editor ? (this.settings.insertMode || "below") : "new-note");
     new Notice(editor ? "Chat history added to the note." : "Opened a note with the chat history.");
+  }
+  async tagNote(editor, view, host) {
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!editor) { new Notice("Open a markdown note first."); return; }
+    const body = editor.getValue();
+    if (!body.trim()) { new Notice("This note is empty."); return; }
+    if (host) setOut(host, "Suggesting tags…");
+    const title = view && view.file ? view.file.basename : "Untitled";
+    const text = await this.complete([
+      { role: "system", content: "Suggest Obsidian tags. Reply with 3 to 6 tags, one per line. Lowercase words with hyphens. No hash, no explanation." },
+      { role: "user", content: "Title: " + title + "\n\n" + clip(body, this.contextLimit()) },
+    ], { stream: false, reasoning_effort: "low", max_tokens: 200 });
+    const tags = parseTags(text);
+    if (!tags.length) { new Notice("Grok did not return tags."); if (host) setOut(host, text || "No tags."); return; }
+    const added = applyTags(editor, tags);
+    const line = "Tags: " + tags.map((tag) => "#" + tag).join(" ");
+    if (host) setOut(host, line);
+    await this.pushTurn("user", "Tag " + title);
+    await this.pushTurn("assistant", line);
+    new Notice(added.length ? "Added tags: " + added.join(", ") : "Those tags were already on the note.");
   }
   async clearHistory() {
     this.settings.history = [];
@@ -632,6 +653,9 @@ function mountChat(root, host) {
   const noteChip = chipButton(chips, "Use note", "file");
   noteChip.addEventListener("click", () => host.grabNote());
   host.chipBtns.push(noteChip);
+  const tagChip = chipButton(chips, "Tag", "tag");
+  tagChip.addEventListener("click", () => tagFromHost(host));
+  host.chipBtns.push(tagChip);
   host.hintEl = wrap.createDiv({ cls: "gm-hint" });
   host.histEl = wrap.createDiv({ cls: "gm-history" });
   wrap.createDiv({ cls: "gm-kicker gm-response-label", text: "Assistant response" });
@@ -792,6 +816,53 @@ function insertFromChat(host, mode) {
   const editor = view ? view.editor : null;
   host.plugin.insertText(editor, host.reply, mode);
   if (typeof host.afterInsert === "function") host.afterInsert(mode);
+}
+function parseTags(text) {
+  const out = [];
+  String(text || "").split(/[\n,]/).forEach((part) => {
+    const tag = part.replace(/^[-*\d.\s#]+/, "").trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_\/-]/g, "");
+    if (tag && tag.length < 40 && out.indexOf(tag) === -1) out.push(tag);
+  });
+  return out.slice(0, 6);
+}
+function applyTags(editor, tags) {
+  const raw = editor.getValue();
+  const existing = [];
+  const fm = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (fm) {
+    const block = fm[1];
+    const tagLine = block.match(/(?:^|\n)tags:\s*\[([^\]]*)\]/);
+    const tagList = block.match(/(?:^|\n)tags:\s*\n((?:\s*-\s*[^\n]+\n?)*)/);
+    if (tagLine) tagLine[1].split(",").forEach((item) => existing.push(item.trim().replace(/^['"]|['"]$/g, "")));
+    if (tagList) tagList[1].split("\n").forEach((item) => { const t = item.replace(/^\s*-\s*/, "").trim(); if (t) existing.push(t); });
+  }
+  const have = existing.map((tag) => tag.toLowerCase());
+  const added = tags.filter((tag) => have.indexOf(tag) === -1);
+  if (!added.length) return added;
+  if (fm) {
+    const block = fm[1];
+    let next = block;
+    if (/\ntags:/.test("\n" + block)) {
+      next = block.replace(/tags:\s*\n(?:\s*-\s*[^\n]+\n?)*/, "tags:\n" + existing.concat(added).map((tag) => "  - " + tag).join("\n") + "\n");
+      if (next === block) next = block.replace(/tags:\s*\[[^\]]*\]/, "tags:\n" + existing.concat(added).map((tag) => "  - " + tag).join("\n"));
+    } else {
+      next = block.replace(/\s*$/, "") + "\ntags:\n" + added.map((tag) => "  - " + tag).join("\n");
+    }
+    editor.setValue("---\n" + next + "\n---" + raw.slice(fm[0].length));
+    return added;
+  }
+  editor.setValue("---\ntags:\n" + added.map((tag) => "  - " + tag).join("\n") + "\n---\n\n" + raw);
+  return added;
+}
+async function tagFromHost(host) {
+  if (host.busy) return;
+  const view = markdownView(host.app);
+  const editor = view ? view.editor : null;
+  host.busy = true;
+  setChipsEnabled(host, false);
+  try { await host.plugin.tagNote(editor, view, host); }
+  catch (err) { new Notice(err.message || String(err)); if (host.outEl) setOut(host, err.message || String(err), "error"); }
+  finally { host.busy = false; setChipsEnabled(host, true); }
 }
 function grabNote(host) {
   const meta = host.plugin.activeNoteMeta();
