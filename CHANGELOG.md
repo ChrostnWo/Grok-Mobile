@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3
+
+Summarize, Rewrite, Grammar, Continue, and Imagine sit in a 3-column grid so they fit the sidebar. The last row has two buttons.
+
 ## 1.4.2
 
 Insert mode is on the sidebar and the phone sheet. Choose insert below, replace selection, open a note, or create a new note, then tap that button. The choice is saved with the other vault settings.

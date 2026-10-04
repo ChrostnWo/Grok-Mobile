@@ -160,20 +160,20 @@
 }
 
 .gm-chips {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
 }
 
 .gm-chip-btn {
-  flex: 0 0 auto;
+  width: 100%;
   min-height: 44px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
+  white-space: normal;
 }
 
 .gm-chip-btn:disabled {

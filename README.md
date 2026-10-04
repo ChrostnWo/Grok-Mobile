@@ -4,7 +4,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.4.2**
+Current release: **1.4.3**
 
 ## Docs
 

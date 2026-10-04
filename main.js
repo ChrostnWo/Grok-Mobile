@@ -502,7 +502,7 @@ function notesInFolder(folder, skip, limit) {
 const QUICK_ACTIONS = [
   { id: "summarize", label: "Summarize", needs: "note", prompt: "Summarize the context. Use a short heading, 5-8 bullets, then a one-line takeaway. Output only the summary." },
   { id: "rewrite", label: "Rewrite", needs: "selection", prompt: "Rewrite the context so it is clearer and tighter. Keep the meaning. Output only the rewrite." },
-  { id: "grammar", label: "Fix grammar", needs: "selection", prompt: "Fix grammar, spelling, and punctuation. Keep the author's voice. Output only the corrected text." },
+  { id: "grammar", label: "Grammar", needs: "selection", prompt: "Fix grammar, spelling, and punctuation. Keep the author's voice. Output only the corrected text." },
   { id: "continue", label: "Continue", needs: "cursor", prompt: "Continue this note in the same voice and structure. Output only the next paragraphs, no preamble." },
 ];
 
