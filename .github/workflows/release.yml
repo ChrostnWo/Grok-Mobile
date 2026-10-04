@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Attest plugin files
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: false
+          body: |
+            Grok for Obsidian 1.4.1
+
+            Review cleanup for the community plugin checks.
+
+            - Copy opens a note with the reply. The plugin does not read or write the system clipboard.
+            - Imagine no longer lists every file in the vault. Folder and subfolders reads only the open note's folder, up to 12 notes.
+            - Release assets are main.js, manifest.json, and styles.css only.
+            - Those files are attested by this workflow.
+
+            Update: download the three files from this release into YourVault/.obsidian/plugins/grok-mobile/ and leave data.json alone. Quit Obsidian and open it again.
+          files: |
+            main.js
+            manifest.json
+            styles.css
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

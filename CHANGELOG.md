@@ -1,6 +1,11 @@
 # Changelog
 
+## 1.4.1
+
+Review cleanup. Copy no longer touches the system clipboard; it opens a note with the reply. Imagine no longer lists every vault file. Folder and subfolders reads only the open note's folder, up to 12 notes. Release assets are `main.js`, `manifest.json`, and `styles.css` only, with GitHub artifact attestations.
+
 ## 1.4.0
+
 
 Imagine from a new prompt, the open note, the current folder, or a 12-note vault sample. Folder sample uses up to 8 notes. Draft from source asks the chat model for one image prompt you can edit. Generate calls `grok-imagine-image-2.0`. Save writes a jpg into the `Grok` folder. Save and embed drops the image link into the open note.
 

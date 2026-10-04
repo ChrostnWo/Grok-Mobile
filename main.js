@@ -172,7 +172,7 @@ class GrokPlugin extends Plugin {
     this.addCommand({ id: "grok-imagine-new", name: "Imagine something new", callback: () => this.openImagine("new") });
     this.addCommand({ id: "grok-imagine-note", name: "Imagine from this note", callback: () => this.openImagine("note") });
     this.addCommand({ id: "grok-imagine-folder", name: "Imagine from this folder", callback: () => this.openImagine("folder") });
-    this.addCommand({ id: "grok-imagine-vault", name: "Imagine from vault sample", callback: () => this.openImagine("vault") });
+    this.addCommand({ id: "grok-imagine-vault", name: "Imagine from this folder and subfolders", callback: () => this.openImagine("vault") });
     this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor) => {
       const sel = editor.getSelection();
       if (!sel || !sel.trim()) return;
@@ -271,9 +271,8 @@ class GrokPlugin extends Plugin {
     }
   }
   insertText(editor, text, mode, selection) {
-    if (!editor) { this.copyText(text); new Notice("No editor open — copied reply."); return; }
     const clean = text.trim() + "\n";
-    if (mode === "copy") { this.copyText(clean); new Notice("Copied Grok reply."); return; }
+    if (!editor || mode === "copy") { this.createReplyNote(clean); new Notice("Opened a note with the reply."); return; }
     if (mode === "replace") {
       if (editor.getSelection() || selection) editor.replaceSelection(clean);
       else editor.replaceRange(clean, editor.getCursor());
@@ -282,15 +281,6 @@ class GrokPlugin extends Plugin {
     if (mode === "new-note") { this.createReplyNote(clean); return; }
     const cursor = editor.getCursor("to");
     editor.replaceRange("\n\n" + clean, { line: cursor.line, ch: editor.getLine(cursor.line).length });
-  }
-  copyText(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).catch(() => {}); return; }
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); } catch (e) {}
-    ta.remove();
   }
   async createReplyNote(body) {
     const name = "Grok " + todayStamp().replace(/[:]/g, "-") + ".md";
@@ -421,9 +411,9 @@ class GrokPlugin extends Plugin {
       files = parent ? parent.children.filter((f) => f.extension === "md") : [];
       if (!files.length && active && active.extension === "md") files = [active];
     } else {
-      files = this.app.vault.getMarkdownFiles().filter((f) => f.path !== folder && !f.path.startsWith(folder + "/"));
-      files.sort((a, b) => ((b.stat && b.stat.mtime) || 0) - ((a.stat && a.stat.mtime) || 0));
-      files = files.slice(0, 12);
+      const parent = active ? active.parent : null;
+      files = parent ? notesInFolder(parent, folder, 12) : [];
+      if (!files.length && active && active.extension === "md") files = [active];
     }
     files = files.slice(0, source === "folder" ? 8 : 12);
     const parts = [];
@@ -495,6 +485,20 @@ class GrokPlugin extends Plugin {
 }
 
 
+
+function notesInFolder(folder, skip, limit) {
+  const out = [];
+  const walk = (node) => {
+    if (!node || out.length >= limit) return;
+    (node.children || []).forEach((child) => {
+      if (out.length >= limit) return;
+      if (child.extension === "md" && child.path !== skip && !child.path.startsWith(skip + "/")) out.push(child);
+      else if (child.children) walk(child);
+    });
+  };
+  walk(folder);
+  return out;
+}
 const QUICK_ACTIONS = [
   { id: "summarize", label: "Summarize", needs: "note", prompt: "Summarize the context. Use a short heading, 5-8 bullets, then a one-line takeaway. Output only the summary." },
   { id: "rewrite", label: "Rewrite", needs: "selection", prompt: "Rewrite the context so it is clearer and tighter. Keep the meaning. Output only the rewrite." },
@@ -566,7 +570,7 @@ function mountChat(root, host) {
   host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
   host.stopBtn = actions.createEl("button", { text: "Stop" });
   host.insertBtn = actions.createEl("button", { text: "Insert" });
-  host.copyBtn = actions.createEl("button", { text: "Copy" });
+  host.copyBtn = actions.createEl("button", { text: "Open note" });
   host.replaceBtn = actions.createEl("button", { text: "Replace sel." });
   host.noteBtn = actions.createEl("button", { text: "Use this note" });
   host.stopBtn.disabled = true;
@@ -776,7 +780,7 @@ class GrokSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Insert mode").setDesc("What quick commands do with the reply.").addDropdown((drop) => {
       drop.addOption("below", "Insert below cursor");
       drop.addOption("replace", "Replace selection");
-      drop.addOption("copy", "Copy only");
+      drop.addOption("copy", "Open a note with the reply");
       drop.addOption("new-note", "Create a new note");
       drop.setValue(this.plugin.settings.insertMode);
       drop.onChange(async (value) => { this.plugin.settings.insertMode = value; await this.plugin.saveSettings(); });
@@ -834,16 +838,16 @@ class ImagineModal extends Modal {
     root.empty();
     const wrap = root.createDiv({ cls: "gm-wrap" });
     wrap.createEl("h2", { text: "Imagine" });
-    wrap.createDiv({ cls: "gm-hint", text: "New prompt, or a picture from the note, folder, or a short vault sample. Images are billed by xAI." });
+    wrap.createDiv({ cls: "gm-hint", text: "New prompt, this note, this folder, or this folder plus subfolders. Images are billed by xAI." });
     const sourceRow = wrap.createDiv({ cls: "gm-imagine-row" });
     this.sourceEl = sourceRow.createEl("select", { cls: "gm-imagine-select" });
-    [["new", "Something new"], ["note", "This note"], ["folder", "This folder"], ["vault", "Vault sample"]].forEach(([id, label]) => {
+    [["new", "Something new"], ["note", "This note"], ["folder", "This folder"], ["vault", "Folder and subfolders"]].forEach(([id, label]) => {
       const opt = this.sourceEl.createEl("option", { text: label });
       opt.value = id;
     });
     this.sourceEl.value = this.source;
     this.promptEl = wrap.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "A quiet desk at night, one lamp, notebook open…", rows: "4" } });
-    this.statusEl = wrap.createDiv({ cls: "gm-hint", text: "Vault sample uses the 12 newest notes, not the whole vault." });
+    this.statusEl = wrap.createDiv({ cls: "gm-hint", text: "Folder and subfolders reads only the open note\u2019s folder, up to 12 notes." });
     this.previewEl = wrap.createDiv({ cls: "gm-imagine-preview" });
     const actions = wrap.createDiv({ cls: "gm-actions" });
     this.draftBtn = actions.createEl("button", { text: "Draft from source" });
