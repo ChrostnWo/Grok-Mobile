@@ -1,7 +1,7 @@
 {
   "id": "grok-mobile",
   "name": "Grok",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "minAppVersion": "1.5.0",
   "description": "Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on phone. Chat plus Imagine. Generate a new image, or one from the note or its folder. Does not list the whole vault or use the system clipboard. Saves jpg into the vault. Uses the xAI API — no CLI.",
   "author": "Chrostn",

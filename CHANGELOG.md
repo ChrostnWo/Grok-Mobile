@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2
+
+Insert mode is on the sidebar and the phone sheet. Choose insert below, replace selection, open a note, or create a new note, then tap that button. The choice is saved with the other vault settings.
+
 ## 1.4.1
 
 Review cleanup. Copy no longer touches the system clipboard; it opens a note with the reply. Imagine no longer lists every vault file. Folder and subfolders reads only the open note's folder, up to 12 notes. Release assets are `main.js`, `manifest.json`, and `styles.css` only, with GitHub artifact attestations.

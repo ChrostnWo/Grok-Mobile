@@ -237,3 +237,16 @@
   max-height: 46vh;
   object-fit: contain;
 }
+
+.gm-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gm-mode-select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  border-radius: 10px;
+}

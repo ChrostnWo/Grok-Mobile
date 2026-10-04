@@ -544,6 +544,17 @@ function runQuickChip(host, action) {
   host.send();
 }
 
+
+const INSERT_MODES = [
+  ["below", "Insert below cursor"],
+  ["replace", "Replace selection"],
+  ["copy", "Open a note with the reply"],
+  ["new-note", "Create a new note"],
+];
+function insertLabel(mode) {
+  const found = INSERT_MODES.find(([id]) => id === mode);
+  return found ? found[1] : "Insert below cursor";
+}
 function mountChat(root, host) {
   root.empty();
   const wrap = root.createDiv({ cls: "gm-wrap" });
@@ -566,22 +577,29 @@ function mountChat(root, host) {
   imagineBtn.addEventListener("click", () => host.plugin.openImagine(host.opts && host.opts.seed ? "note" : "new"));
   host.chipBtns.push(imagineBtn);
   host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
+  const modeRow = wrap.createDiv({ cls: "gm-mode-row" });
+  modeRow.createSpan({ cls: "gm-kicker", text: "Insert mode" });
+  host.modeEl = modeRow.createEl("select", { cls: "gm-mode-select" });
+  INSERT_MODES.forEach(([id, label]) => {
+    const opt = host.modeEl.createEl("option", { text: label });
+    opt.value = id;
+  });
+  host.modeEl.value = host.plugin.settings.insertMode || "below";
+  host.modeEl.addEventListener("change", async () => {
+    host.plugin.settings.insertMode = host.modeEl.value;
+    await host.plugin.saveSettings();
+    if (host.insertBtn) host.insertBtn.setText(insertLabel(host.modeEl.value));
+  });
   const actions = wrap.createDiv({ cls: "gm-actions" });
   host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
   host.stopBtn = actions.createEl("button", { text: "Stop" });
-  host.insertBtn = actions.createEl("button", { text: "Insert" });
-  host.copyBtn = actions.createEl("button", { text: "Open note" });
-  host.replaceBtn = actions.createEl("button", { text: "Replace sel." });
+  host.insertBtn = actions.createEl("button", { text: insertLabel(host.plugin.settings.insertMode), cls: "gm-wide" });
   host.noteBtn = actions.createEl("button", { text: "Use this note" });
   host.stopBtn.disabled = true;
   host.insertBtn.disabled = true;
-  host.copyBtn.disabled = true;
-  host.replaceBtn.disabled = true;
   host.sendBtn.addEventListener("click", () => host.send());
   host.stopBtn.addEventListener("click", () => host.stop());
-  host.insertBtn.addEventListener("click", () => host.insert("below"));
-  host.copyBtn.addEventListener("click", () => host.insert("copy"));
-  host.replaceBtn.addEventListener("click", () => host.insert("replace"));
+  host.insertBtn.addEventListener("click", () => host.insert(host.modeEl ? host.modeEl.value : host.plugin.settings.insertMode));
   host.noteBtn.addEventListener("click", () => host.grabNote());
   host.promptEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); host.send(); }
@@ -625,8 +643,6 @@ async function sendChat(host) {
     else setOut(host, "(empty reply)");
     const ok = !!text;
     host.insertBtn.disabled = !ok;
-    host.copyBtn.disabled = !ok;
-    host.replaceBtn.disabled = !ok;
   } catch (err) {
     if (err && err.name === "AbortError") setOut(host, (host.reply || "") + "\n\n[stopped]");
     else setOut(host, err.message || String(err), "error");
