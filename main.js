@@ -287,6 +287,7 @@ class GrokPlugin extends Plugin {
     const added = applyTags(editor, tags);
     const line = "Tags: " + tags.map((tag) => "#" + tag).join(" ");
     if (host) setOut(host, line);
+    if (host && host.tagEl) renderTagPills(host, tags);
     await this.pushTurn("user", "Tag " + title);
     await this.pushTurn("assistant", line);
     new Notice(added.length ? "Added tags: " + added.join(", ") : "Those tags were already on the note.");
@@ -669,8 +670,21 @@ function mountChat(root, host) {
     setIcon(closeBtn, "x");
     closeBtn.addEventListener("click", () => host.close());
   }
+  const titleRow = wrap.createDiv({ cls: "gm-title-row" });
+  host.titleEl = titleRow.createEl("input", { cls: "gm-title-input", attr: { type: "text", placeholder: "Note title" } });
+  host.titleEl.value = (host.opts && host.opts.title) || "";
+  host.titleBtn = titleRow.createEl("button", { text: "Title", cls: "gm-rename" });
+  host.renameBtn = titleRow.createEl("button", { text: "Rename", cls: "gm-rename" });
+  host.titleBtn.addEventListener("click", () => titleFromHost(host));
+  host.renameBtn.addEventListener("click", () => renameFromHost(host));
+  host.chipBtns = [host.titleBtn];
+  const tagRow = wrap.createDiv({ cls: "gm-tag-row" });
+  host.tagEl = tagRow.createDiv({ cls: "gm-tag-pills" });
+  host.tagEl.createSpan({ cls: "gm-hint", text: "Tags from the note" });
+  host.tagBtn = tagRow.createEl("button", { text: "Auto", cls: "gm-rename" });
+  host.tagBtn.addEventListener("click", () => tagFromHost(host));
+  host.chipBtns.push(host.tagBtn);
   const chips = wrap.createDiv({ cls: "gm-chips" });
-  host.chipBtns = [];
   QUICK_ACTIONS.forEach((action) => {
     const btn = chipButton(chips, action.label, action.icon || "sparkles");
     btn.addEventListener("click", () => runQuickChip(host, action));
@@ -682,17 +696,6 @@ function mountChat(root, host) {
   const noteChip = chipButton(chips, "Use note", "file");
   noteChip.addEventListener("click", () => host.grabNote());
   host.chipBtns.push(noteChip);
-  const tagChip = chipButton(chips, "Tag", "tag");
-  tagChip.addEventListener("click", () => tagFromHost(host));
-  host.chipBtns.push(tagChip);
-  const titleChip = chipButton(chips, "Title", "heading");
-  titleChip.addEventListener("click", () => titleFromHost(host));
-  host.chipBtns.push(titleChip);
-  const titleRow = wrap.createDiv({ cls: "gm-title-row" });
-  host.titleEl = titleRow.createEl("input", { cls: "gm-title-input", attr: { type: "text", placeholder: "Note title" } });
-  host.titleEl.value = (host.opts && host.opts.title) || "";
-  host.renameBtn = titleRow.createEl("button", { text: "Rename", cls: "gm-rename" });
-  host.renameBtn.addEventListener("click", () => renameFromHost(host));
   host.hintEl = wrap.createDiv({ cls: "gm-hint" });
   host.histEl = wrap.createDiv({ cls: "gm-history" });
   wrap.createDiv({ cls: "gm-kicker gm-response-label", text: "Assistant response" });
@@ -854,6 +857,12 @@ function insertFromChat(host, mode) {
   const editor = view ? view.editor : null;
   host.plugin.insertText(editor, host.reply, mode);
   if (typeof host.afterInsert === "function") host.afterInsert(mode);
+}
+function renderTagPills(host, tags) {
+  if (!host.tagEl) return;
+  host.tagEl.empty();
+  if (!tags.length) { host.tagEl.createSpan({ cls: "gm-hint", text: "No tags yet" }); return; }
+  tags.forEach((tag) => host.tagEl.createSpan({ cls: "gm-pill", text: "#" + tag }));
 }
 function cleanTitle(text) {
   return String(text || "").split("\n")[0].replace(/^[#*"'\s]+|[#*"'\s.]+$/g, "").replace(/[\\/:*?"<>|]/g, "").replace(/\.md$/i, "").trim().slice(0, 80);

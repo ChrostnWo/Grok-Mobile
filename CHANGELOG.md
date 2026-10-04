@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0
+
+Title sits in a one-row bar at the top of the sidebar and phone sheet. Auto reads the note content, suggests tags, and writes the new ones into frontmatter.
+
 ## 1.4.9
 
 The sidebar and phone sheet have a note title field. Title asks Grok for a name. Rename applies that name to the open note, keeping the folder.
