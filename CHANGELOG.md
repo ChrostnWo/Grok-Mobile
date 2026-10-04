@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.5
+
+Quick actions are a fixed 3 by 2 box: Summarize, Rewrite, Grammar, Continue, Imagine, Use note. The cells shrink to the sidebar width instead of scrolling off.
+
 ## 1.4.4
 
 Quick actions are a fixed 3 by 2 box that cannot overflow the sidebar. Cells are Summarize, Rewrite, Grammar, Continue, Imagine, and Use note.
