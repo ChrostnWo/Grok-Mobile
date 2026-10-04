@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6
+
+Chat history is kept in the vault plugin data and shown in the sidebar and sheet. Add history to note inserts the thread as Markdown. Clear history removes it. The last 12 turns are sent with the next message.
+
 ## 1.4.5
 
 Quick actions are a fixed 3 by 2 box: Summarize, Rewrite, Grammar, Continue, Imagine, Use note. The cells shrink to the sidebar width instead of scrolling off.

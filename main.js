@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
   includeTitle: true,
   stream: true,
   chatUi: "auto",
+  history: [],
   imageModel: "grok-imagine-image-2.0",
   imageAspect: "1:1",
   imageFolder: "Grok",
@@ -169,6 +170,8 @@ class GrokPlugin extends Plugin {
       },
     });
     this.addCommand({ id: "grok-test-key", name: "Test xAI API key", callback: () => this.testKey() });
+    this.addCommand({ id: "grok-insert-history", name: "Insert Grok chat history into note", callback: () => this.insertHistory() });
+    this.addCommand({ id: "grok-clear-history", name: "Clear Grok chat history", callback: () => this.clearHistory() });
     this.addCommand({ id: "grok-imagine-new", name: "Imagine something new", callback: () => this.openImagine("new") });
     this.addCommand({ id: "grok-imagine-note", name: "Imagine from this note", callback: () => this.openImagine("note") });
     this.addCommand({ id: "grok-imagine-folder", name: "Imagine from this folder", callback: () => this.openImagine("folder") });
@@ -208,6 +211,42 @@ class GrokPlugin extends Plugin {
     }
   }
   async saveSettings() { await this.saveData(this.settings); }
+  turns() { return Array.isArray(this.settings.history) ? this.settings.history : []; }
+  async pushTurn(role, content) {
+    const text = String(content || "").trim();
+    if (!text) return;
+    const turns = this.turns().concat([{ role: role, content: text.slice(0, 8000), at: todayStamp() }]).slice(-40);
+    this.settings.history = turns;
+    await this.saveSettings();
+  }
+  historyMarkdown() {
+    const turns = this.turns();
+    if (!turns.length) return "";
+    const lines = ["## Grok chat", ""];
+    turns.forEach((turn) => {
+      lines.push("### " + (turn.role === "assistant" ? "Grok" : "You"));
+      if (turn.at) lines.push("*" + turn.at + "*");
+      lines.push("");
+      lines.push(turn.content);
+      lines.push("");
+    });
+    return lines.join("\n").trim() + "\n";
+  }
+  async insertHistory() {
+    const md = this.historyMarkdown();
+    if (!md) { new Notice("No Grok chat history yet."); return; }
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editor = view ? view.editor : null;
+    this.insertText(editor, md, editor ? (this.settings.insertMode || "below") : "new-note");
+    new Notice(editor ? "Chat history added to the note." : "Opened a note with the chat history.");
+  }
+  async clearHistory() {
+    this.settings.history = [];
+    await this.saveSettings();
+    const view = this.getChatView();
+    if (view && view.histEl) renderHistory(view);
+    new Notice("Grok chat history cleared.");
+  }
   modelId() { return this.settings.model === "custom" ? (this.settings.customModel || "grok-4.7").trim() : this.settings.model; }
   contextLimit() { return isPhone() ? 24000 : 80000; }
   preferredUi() {
@@ -264,6 +303,8 @@ class GrokPlugin extends Plugin {
       notice.hide();
       if (!text) { new Notice("Grok returned an empty reply."); return; }
       this.insertText(editor, text, forceInsert || this.settings.insertMode, selection);
+      await this.pushTurn("user", userText);
+      await this.pushTurn("assistant", text);
       new Notice("Grok reply inserted.");
     } catch (err) {
       notice.hide();
@@ -579,6 +620,7 @@ function mountChat(root, host) {
   const noteChip = chips.createEl("button", { text: "Use note", cls: "gm-chip-btn", attr: { type: "button" } });
   noteChip.addEventListener("click", () => host.grabNote());
   host.chipBtns.push(noteChip);
+  host.histEl = wrap.createDiv({ cls: "gm-history" });
   host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
   const modeRow = wrap.createDiv({ cls: "gm-mode-row" });
   modeRow.createSpan({ cls: "gm-kicker", text: "Insert mode" });
@@ -602,6 +644,10 @@ function mountChat(root, host) {
   host.sendBtn.addEventListener("click", () => host.send());
   host.stopBtn.addEventListener("click", () => host.stop());
   host.insertBtn.addEventListener("click", () => host.insert(host.modeEl ? host.modeEl.value : host.plugin.settings.insertMode));
+  host.histBtn = actions.createEl("button", { text: "Add history to note" });
+  host.clearBtn = actions.createEl("button", { text: "Clear history" });
+  host.histBtn.addEventListener("click", () => host.plugin.insertHistory());
+  host.clearBtn.addEventListener("click", async () => { await host.plugin.clearHistory(); renderHistory(host); });
   host.promptEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); host.send(); }
   });
@@ -616,6 +662,9 @@ function applyChatOpts(host, opts) {
   const n = host.opts.seed ? host.opts.seed.trim().length : 0;
   if (host.ctxChip) host.ctxChip.setText(n ? label + (title ? " · " + title : "") : "no context");
   if (host.hintEl) host.hintEl.setText(n ? "Context: " + n + " characters from the note/selection." : "No note context yet. Tap Use this note or select text first.");
+  renderHistory(host);
+  const last = host.plugin.turns().filter((t) => t.role === "assistant").slice(-1)[0];
+  if (last && host.reply === "") host.reply = last.content;
   if (host.opts.autoSend) {
     host.opts.autoSend = false;
     setTimeout(() => host.send(), 50);
@@ -632,6 +681,9 @@ async function sendChat(host) {
   setChipsEnabled(host, false);
   setOut(host, "Thinking…");
   const messages = [{ role: "system", content: host.plugin.settings.systemPrompt }];
+  host.plugin.turns().slice(-12).forEach((turn) => {
+    if (turn.role === "user" || turn.role === "assistant") messages.push({ role: turn.role, content: turn.content });
+  });
   if (host.opts && host.opts.seed && host.opts.seed.trim()) {
     messages.push({ role: "user", content: "Context from my Obsidian note" + (host.opts.title ? " (\"" + host.opts.title + "\")" : "") + ":\n\n" + clip(host.opts.seed, host.plugin.contextLimit()) });
     messages.push({ role: "assistant", content: "I have the note context. Ask your question." });
@@ -640,8 +692,12 @@ async function sendChat(host) {
   try {
     const text = await host.plugin.complete(messages, { reasoning_effort: (host.opts && host.opts.reasoningEffort) || "", onToken: (partial) => { host.reply = partial; setOut(host, partial); } });
     host.reply = text;
-    if (text) await renderReply(host, text);
-    else setOut(host, "(empty reply)");
+    if (text) {
+      await host.plugin.pushTurn("user", question);
+      await host.plugin.pushTurn("assistant", text);
+      renderHistory(host);
+      await renderReply(host, text);
+    } else setOut(host, "(empty reply)");
     const ok = !!text;
     host.insertBtn.disabled = !ok;
   } catch (err) {
@@ -659,6 +715,23 @@ function stopChat(host) {
   host.busy = false;
   if (host.sendBtn) host.sendBtn.disabled = false;
   if (host.stopBtn) host.stopBtn.disabled = true;
+}
+function renderHistory(host) {
+  if (!host.histEl) return;
+  const turns = host.plugin.turns();
+  host.histEl.empty();
+  if (!turns.length) {
+    host.histEl.createDiv({ cls: "gm-hint", text: "No chat history yet." });
+    if (host.histBtn) host.histBtn.disabled = true;
+    return;
+  }
+  if (host.histBtn) host.histBtn.disabled = false;
+  turns.slice(-8).forEach((turn) => {
+    const row = host.histEl.createDiv({ cls: "gm-turn" });
+    row.createDiv({ cls: "gm-kicker", text: (turn.role === "assistant" ? "Grok" : "You") + (turn.at ? " · " + turn.at : "") });
+    row.createDiv({ cls: "gm-turn-text", text: turn.content });
+  });
+  host.histEl.scrollTop = host.histEl.scrollHeight;
 }
 function setChipsEnabled(host, on) {
   (host.chipBtns || []).forEach((btn) => { btn.disabled = !on; });

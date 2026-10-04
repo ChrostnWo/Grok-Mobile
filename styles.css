@@ -263,3 +263,25 @@
   font-size: 16px;
   border-radius: 10px;
 }
+
+.gm-history {
+  max-height: 28vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gm-turn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--background-secondary);
+}
+
+.gm-turn-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.4;
+}
