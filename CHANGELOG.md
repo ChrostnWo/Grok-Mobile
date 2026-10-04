@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.3
+
+The phone sheet now has a Done bar that sits above the iOS keyboard. Return on the prompt or title field also hides the keyboard. The sidebar is unchanged.
+
 ## 1.5.2
 
 A yellow Buy Me a Coffee button with the cup logo sits under the title on the sidebar and phone sheet, and at the top of Settings → Grok. It opens https://buymeacoffee.com/chrostn.

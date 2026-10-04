@@ -522,3 +522,21 @@
   filter: brightness(0.95);
   color: #111;
 }
+
+.gm-kb-bar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 48px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.gm-kb-bar.is-open {
+  display: flex;
+}
