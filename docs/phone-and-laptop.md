@@ -2,6 +2,10 @@
 
 The same plugin runs on desktop, tablet, and phone. `isDesktopOnly` is false. The layout changes so the phone UI is tappable.
 
+![Phone sheet](images/phone-sheet.jpg)
+
+![Laptop sidebar](images/laptop-sidebar.jpg)
+
 ## Laptop and tablet
 
 Auto layout opens a sidebar. Replies can stream. Finished replies render as Markdown. While tokens are arriving, the reply stays plain text so the pane does not jump.

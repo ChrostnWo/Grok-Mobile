@@ -6,6 +6,16 @@ Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet
 
 Current release: **1.4.5**
 
+## Interface
+
+Phone uses a sheet. Laptop and tablet use a sidebar. Quick actions sit in a 3 by 2 box on both.
+
+![Grok Notes sheet on phone](docs/images/phone-sheet.jpg)
+
+![Grok Notes sidebar on laptop](docs/images/laptop-sidebar.jpg)
+
+These are interface mockups of the 1.4.5 layout, not screenshots from a vault.
+
 ## Docs
 
 - [Install and update](docs/install.md)
@@ -64,12 +74,14 @@ Summarize opens the sheet (phone) or sidebar (laptop) with the note already load
 
 ## Quick actions
 
-On the phone sheet and the desktop sidebar, four chips sit above the reply:
+On the phone sheet and the desktop sidebar, quick actions sit in a locked 3 by 2 box:
 
 - Summarize — the open note (not a stray selection)
 - Rewrite — selection, or the context already loaded
-- Fix grammar — selection, or the context already loaded
+- Grammar — selection, or the context already loaded
 - Continue — text before the cursor
+- Imagine — open image generation
+- Use note — load the open note as context
 
 A chip fills the prompt and sends. Insert, Replace, and Copy still use the raw Markdown, not the rendered HTML.
 
