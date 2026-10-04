@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+On iPhone the keyboard no longer opens by itself. Done hides it. Send hides it. Tapping the sheet outside a field hides it. The sheet moves up while the keyboard is open.
+
 ## 1.5.0
 
 Title sits in a one-row bar at the top of the sidebar and phone sheet. Auto reads the note content, suggests tags, and writes the new ones into frontmatter.

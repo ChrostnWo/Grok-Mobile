@@ -487,3 +487,14 @@
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
 }
+
+.gm-done {
+  min-height: 44px;
+  min-width: 64px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.gm-sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+}

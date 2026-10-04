@@ -730,14 +730,41 @@ function mountChat(root, host) {
   host.histBtn.addEventListener("click", () => host.plugin.insertHistory());
   host.clearBtn.addEventListener("click", async () => { await host.plugin.clearHistory(); renderHistory(host); });
   const compose = wrap.createDiv({ cls: "gm-compose" });
-  host.promptEl = compose.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "Ask Grok anything about this note...", rows: "1" } });
+  host.promptEl = compose.createEl("textarea", { cls: "gm-prompt", attr: { placeholder: "Ask Grok anything about this note...", rows: "1", enterkeyhint: "send" } });
+  host.doneBtn = compose.createEl("button", { text: "Done", cls: "gm-done", attr: { type: "button" } });
   host.sendBtn = compose.createEl("button", { cls: "gm-send", attr: { type: "button", "aria-label": "Send" } });
   setIcon(host.sendBtn, "send");
   host.stopBtn = host.sendBtn;
-  host.sendBtn.addEventListener("click", () => host.busy ? host.stop() : host.send());
+  host.doneBtn.addEventListener("click", () => hideKeyboard(host));
+  host.sendBtn.addEventListener("click", () => { hideKeyboard(host); host.busy ? host.stop() : host.send(); });
   host.promptEl.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); host.send(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); hideKeyboard(host); host.send(); }
   });
+  bindKeyboard(host, wrap);
+}
+function hideKeyboard(host) {
+  const active = document.activeElement;
+  if (active && active.blur) active.blur();
+  if (host.promptEl) host.promptEl.blur();
+  if (host.titleEl) host.titleEl.blur();
+  if (host.wrapEl) host.wrapEl.style.paddingBottom = "";
+}
+function bindKeyboard(host, wrap) {
+  host.wrapEl = wrap;
+  wrap.addEventListener("pointerdown", (e) => {
+    const t = e.target;
+    if (!t || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
+    hideKeyboard(host);
+  });
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const lift = () => {
+    const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    wrap.style.paddingBottom = covered > 40 ? covered + "px" : "";
+    if (covered > 40 && host.promptEl) host.promptEl.scrollIntoView({ block: "nearest" });
+  };
+  vv.addEventListener("resize", lift);
+  vv.addEventListener("scroll", lift);
 }
 function applyChatOpts(host, opts) {
   host.opts = opts || {};
@@ -760,6 +787,7 @@ function applyChatOpts(host, opts) {
 }
 async function sendChat(host) {
   const question = (host.promptEl.value || "").trim();
+  hideKeyboard(host);
   if (!question) { new Notice("Type a prompt first."); return; }
   if (!host.plugin.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
   if (host.busy) return;
@@ -949,7 +977,7 @@ class GrokChatModal extends Modal {
     this.modalEl.addClass("gm-sheet");
     mountChat(this.contentEl, this);
     applyChatOpts(this, this.opts);
-    setTimeout(() => this.promptEl.focus(), 30);
+    if (!isPhone()) setTimeout(() => this.promptEl && this.promptEl.focus(), 30);
   }
   onClose() { stopChat(this); this.contentEl.empty(); }
   send() { return sendChat(this); }
@@ -974,7 +1002,7 @@ class GrokChatView extends ItemView {
     applyChatOpts(this, this.plugin.pendingOpts || this.opts || {});
   }
   async onClose() { stopChat(this); }
-  applyOpts(opts) { applyChatOpts(this, opts); if (this.promptEl) this.promptEl.focus(); }
+  applyOpts(opts) { applyChatOpts(this, opts); if (!isPhone() && this.promptEl) this.promptEl.focus(); }
   send() { return sendChat(this); }
   stop() { stopChat(this); }
   insert(mode) { insertFromChat(this, mode); }
