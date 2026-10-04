@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.4
+
+Plugin description is under 250 characters, which the community review requires.
+
 ## 1.4.3
 
 Summarize, Rewrite, Grammar, Continue, and Imagine sit in a 3-column grid so they fit the sidebar. The last row has two buttons.
