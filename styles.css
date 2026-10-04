@@ -159,21 +159,34 @@
   }
 }
 
-.gm-chips {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+.gm-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
-.gm-chip-btn {
+.gm-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
+  min-width: 0;
+}
+
+.gm-view button.gm-chip-btn,
+.gm-modal button.gm-chip-btn {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
-  padding: 6px 8px;
+  margin: 0;
+  padding: 4px 4px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: normal;
+  box-sizing: border-box;
 }
 
 .gm-chip-btn:disabled {

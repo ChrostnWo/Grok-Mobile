@@ -576,6 +576,9 @@ function mountChat(root, host) {
   const imagineBtn = chips.createEl("button", { text: "Imagine", cls: "gm-chip-btn", attr: { type: "button" } });
   imagineBtn.addEventListener("click", () => host.plugin.openImagine(host.opts && host.opts.seed ? "note" : "new"));
   host.chipBtns.push(imagineBtn);
+  const noteChip = chips.createEl("button", { text: "Use note", cls: "gm-chip-btn", attr: { type: "button" } });
+  noteChip.addEventListener("click", () => host.grabNote());
+  host.chipBtns.push(noteChip);
   host.outEl = wrap.createDiv({ cls: "gm-out is-empty", text: "Reply will show here." });
   const modeRow = wrap.createDiv({ cls: "gm-mode-row" });
   modeRow.createSpan({ cls: "gm-kicker", text: "Insert mode" });
@@ -594,13 +597,11 @@ function mountChat(root, host) {
   host.sendBtn = actions.createEl("button", { text: "Send", cls: "mod-cta gm-wide" });
   host.stopBtn = actions.createEl("button", { text: "Stop" });
   host.insertBtn = actions.createEl("button", { text: insertLabel(host.plugin.settings.insertMode), cls: "gm-wide" });
-  host.noteBtn = actions.createEl("button", { text: "Use this note" });
   host.stopBtn.disabled = true;
   host.insertBtn.disabled = true;
   host.sendBtn.addEventListener("click", () => host.send());
   host.stopBtn.addEventListener("click", () => host.stop());
   host.insertBtn.addEventListener("click", () => host.insert(host.modeEl ? host.modeEl.value : host.plugin.settings.insertMode));
-  host.noteBtn.addEventListener("click", () => host.grabNote());
   host.promptEl.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); host.send(); }
   });

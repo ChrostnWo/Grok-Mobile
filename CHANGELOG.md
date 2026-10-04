@@ -2,6 +2,10 @@
 
 ## 1.4.4
 
+Quick actions are a fixed 3 by 2 box that cannot overflow the sidebar. Cells are Summarize, Rewrite, Grammar, Continue, Imagine, and Use note.
+
+## 1.4.4
+
 Plugin description is under 250 characters, which the community review requires.
 
 ## 1.4.3
