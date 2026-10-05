@@ -670,9 +670,11 @@ function mountChat(root, host) {
     setIcon(closeBtn, "x");
     closeBtn.addEventListener("click", () => host.close());
   }
-  const coffee = wrap.createEl("a", { cls: "gm-coffee", attr: { href: "https://buymeacoffee.com/chrostn", target: "_blank", rel: "noopener" } });
-  coffee.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 7h13a3 3 0 0 1 0 6h-1.1A6 6 0 0 1 5 16.9V18h10v-1.1A6 6 0 0 1 15.9 13H17a3 3 0 0 0 0-6H4V7zm1 2v3.2A4 4 0 0 0 14 13V9H5zm12 0h.2a1 1 0 0 1 0 2H17V9z"/></svg><span>Buy me a coffee</span>';
-  coffee.addEventListener("click", (e) => { e.preventDefault(); window.open("https://buymeacoffee.com/chrostn", "_blank"); });
+  if (host.close) {
+    const coffee = wrap.createEl("a", { cls: "gm-coffee", attr: { href: "https://buymeacoffee.com/chrostn", target: "_blank", rel: "noopener" } });
+    coffee.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 7h13a3 3 0 0 1 0 6h-1.1A6 6 0 0 1 5 16.9V18h10v-1.1A6 6 0 0 1 15.9 13H17a3 3 0 0 0 0-6H4V7zm1 2v3.2A4 4 0 0 0 14 13V9H5zm12 0h.2a1 1 0 0 1 0 2H17V9z"/></svg><span>Buy me a coffee</span>';
+    coffee.addEventListener("click", (e) => { e.preventDefault(); window.open("https://buymeacoffee.com/chrostn", "_blank"); });
+  }
   const titleRow = wrap.createDiv({ cls: "gm-title-row" });
   host.titleEl = titleRow.createEl("input", { cls: "gm-title-input", attr: { type: "text", placeholder: "Note title" } });
   host.titleEl.value = (host.opts && host.opts.title) || "";

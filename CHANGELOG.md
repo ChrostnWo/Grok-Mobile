@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.6
+
+The Buy Me a Coffee button is no longer on the sidebar. It remains on the phone sheet and in Settings → Grok Notes.
+
 ## 1.5.5
 
 The phone sheet moves up when the prompt or title field is focused, using a fallback height if iOS does not report the keyboard. Done sits on that lifted edge and hides the keyboard.
