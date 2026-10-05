@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.5
+
+The phone sheet moves up when the prompt or title field is focused, using a fallback height if iOS does not report the keyboard. Done sits on that lifted edge and hides the keyboard.
+
 ## 1.5.4
 
 The public name is Grok Notes. Settings, the ribbon, and the sidebar title use that name. The plugin id and install folder stay `grok-mobile`, so an existing `data.json` is still found. Repo links point at https://github.com/ChrostnWo/Grok-Notes.

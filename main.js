@@ -754,28 +754,43 @@ function hideKeyboard(host) {
     setTimeout(() => el.removeAttribute("readonly"), 80);
   });
   if (host.kbBar) host.kbBar.removeClass("is-open");
+  if (host.sheetEl) host.sheetEl.style.transform = "";
   if (host.wrapEl) host.wrapEl.style.paddingBottom = "";
+}
+function keyboardCover() {
+  const vv = window.visualViewport;
+  const reported = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  if (reported > 80) return reported;
+  return Math.round(window.innerHeight * 0.42);
 }
 function bindKeyboard(host, wrap) {
   host.wrapEl = wrap;
+  if (!isPhone()) return;
   const bar = document.body.createDiv({ cls: "gm-kb-bar" });
   const done = bar.createEl("button", { text: "Done", cls: "gm-done", attr: { type: "button" } });
+  done.addEventListener("touchend", (e) => { e.preventDefault(); hideKeyboard(host); });
   done.addEventListener("click", (e) => { e.preventDefault(); hideKeyboard(host); });
   host.kbBar = bar;
-  const vv = window.visualViewport;
   const lift = () => {
-    const covered = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-    const open = covered > 80 && document.activeElement && (document.activeElement === host.promptEl || document.activeElement === host.titleEl);
-    bar.toggleClass("is-open", open);
-    bar.style.bottom = open ? covered + "px" : "";
-    wrap.style.paddingBottom = open ? (covered + 52) + "px" : "";
+    const focused = document.activeElement === host.promptEl || document.activeElement === host.titleEl;
+    const covered = focused ? keyboardCover() : 0;
+    if (host.sheetEl) host.sheetEl.style.transform = covered ? "translateY(-" + covered + "px)" : "";
+    bar.toggleClass("is-open", !!covered);
+    bar.style.bottom = covered ? covered + "px" : "";
+    wrap.style.paddingBottom = covered ? "52px" : "";
   };
+  host.liftKb = lift;
+  const vv = window.visualViewport;
   if (vv) {
     vv.addEventListener("resize", lift);
     vv.addEventListener("scroll", lift);
   }
-  [host.promptEl, host.titleEl].forEach((el) => { if (el) el.addEventListener("focus", () => setTimeout(lift, 50)); });
-  host.closeKb = () => { if (bar.parentElement) bar.remove(); };
+  [host.promptEl, host.titleEl].forEach((el) => {
+    if (!el) return;
+    el.addEventListener("focus", () => setTimeout(lift, 30));
+    el.addEventListener("blur", () => setTimeout(lift, 30));
+  });
+  host.closeKb = () => { if (bar.parentElement) bar.remove(); if (host.sheetEl) host.sheetEl.style.transform = ""; };
 }
 function applyChatOpts(host, opts) {
   host.opts = opts || {};
@@ -987,6 +1002,7 @@ class GrokChatModal extends Modal {
     this.modalEl.addClass("gm-modal");
     this.modalEl.addClass("gm-sheet");
     mountChat(this.contentEl, this);
+    this.sheetEl = this.modalEl;
     applyChatOpts(this, this.opts);
     if (!isPhone()) setTimeout(() => this.promptEl && this.promptEl.focus(), 30);
   }
