@@ -30,16 +30,9 @@ jobs:
         with:
           generate_release_notes: false
           body: |
-            Grok for Obsidian 1.4.1
+            Grok Notes
 
-            Review cleanup for the community plugin checks.
-
-            - Copy opens a note with the reply. The plugin does not read or write the system clipboard.
-            - Imagine no longer lists every file in the vault. Folder and subfolders reads only the open note's folder, up to 12 notes.
-            - Release assets are main.js, manifest.json, and styles.css only.
-            - Those files are attested by this workflow.
-
-            Update: download the three files from this release into YourVault/.obsidian/plugins/grok-mobile/ and leave data.json alone. Quit Obsidian and open it again.
+            Public name is Grok Notes. Install folder stays YourVault/.obsidian/plugins/grok-mobile/ because the plugin id is grok-mobile. Leave data.json alone. Quit Obsidian and open it again.
           files: |
             main.js
             manifest.json

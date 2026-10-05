@@ -1,10 +1,10 @@
-# Grok for Obsidian docs
+# Grok Notes
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on a laptop. Sheet on a phone. Your xAI API key. No CLI.
 
-Current release: **1.4.0**
+Current release: **1.5.4**
 
-Repo: https://github.com/ChrostnWo/Grok-Mobile
+Repo: https://github.com/ChrostnWo/Grok-Notes
 
 ## Pages
 
@@ -25,7 +25,7 @@ Repo: https://github.com/ChrostnWo/Grok-Mobile
 
 ## What this plugin is
 
-Grok for Obsidian writes inside the vault. It is not a coding agent and it does not shell out to the Grok CLI.
+Grok Notes writes inside the vault. It is not a coding agent and it does not shell out to the Grok CLI.
 
 - Chat about the open note or a selection
 - Summarize, rewrite, fix grammar, continue from the cursor

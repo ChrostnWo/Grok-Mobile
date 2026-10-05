@@ -2,7 +2,7 @@
 
 Default chat model is `grok-4.7` on the public xAI API (chat completions).
 
-Settings → Grok → Model.
+Settings → Grok Notes → Model.
 
 | Picker | API id | Notes |
 | --- | --- | --- |

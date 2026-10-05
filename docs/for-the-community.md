@@ -1,6 +1,6 @@
 # For the Obsidian community
 
-Grok for Obsidian is a vault writing plugin. It is not a coding agent.
+Grok Notes is a vault writing plugin. The repo is Grok-Notes. The plugin id stays grok-mobile. It is not a coding agent.
 
 ## Fit
 
@@ -16,7 +16,7 @@ Some plugins embed Grok Build, Claude Code, or Codex. Those need a local CLI and
 ## Listing facts
 
 - Id: `grok-mobile`
-- Name: Grok
+- Name: Grok Notes
 - Author: Chrostn
 - Min app: 1.5.0
 - Funding: https://buymeacoffee.com/chrostn

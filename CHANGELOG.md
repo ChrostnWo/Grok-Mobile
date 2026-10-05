@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.4
+
+The public name is Grok Notes. Settings, the ribbon, and the sidebar title use that name. The plugin id and install folder stay `grok-mobile`, so an existing `data.json` is still found. Repo links point at https://github.com/ChrostnWo/Grok-Notes.
+
+
 ## 1.5.3
 
 The phone sheet now has a Done bar that sits above the iOS keyboard. Return on the prompt or title field also hides the keyboard. The sidebar is unchanged.

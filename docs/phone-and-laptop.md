@@ -20,7 +20,7 @@ Summarize keeps the open note even when the editor is not active. Quick actions 
 
 ## Layout setting
 
-Settings → Grok → Chat layout:
+Settings → Grok Notes → Chat layout:
 
 - Auto — sidebar on desktop and tablet, sheet on phone
 - Always sidebar

@@ -10,7 +10,7 @@ Yes. Auto layout uses a sheet on the phone and a sidebar on a laptop. Install th
 
 ## Is it in the community plugin browser?
 
-Not yet. Install from the latest release, or with BRAT from `ChrostnWo/Grok-Mobile`.
+Not yet. Install from the latest release, or with BRAT from `ChrostnWo/Grok-Notes`.
 
 ## Where is my key stored?
 
@@ -22,8 +22,8 @@ Only the text you choose: selection, note, prompt, folder sample, or the 12 newe
 
 ## Can I change the image folder?
 
-Settings → Grok → Imagine folder. The default is `Grok`.
+Settings → Grok Notes → Imagine folder. The default is `Grok`.
 
-## Why is the plugin id grok-mobile?
+## Why is the folder still grok-mobile?
 
-The id is how Obsidian finds updates. Renaming the folder or the id breaks install. The display name can change without changing the id.
+The public name is Grok Notes. The plugin id is `grok-mobile`, and Obsidian only loads a plugin from a folder with that id. Renaming the folder or the id hides the plugin and drops the saved API key. Install and update into `.obsidian/plugins/grok-mobile/`.

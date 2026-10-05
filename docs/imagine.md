@@ -20,6 +20,6 @@ Generate calls `grok-imagine-image-2.0` and bills one image.
 - **Save** writes a jpg into the `Grok` folder in the vault
 - **Save and embed** writes the jpg and drops the image link into the open note
 
-Settings → Grok → Imagine model, aspect, and folder.
+Settings → Grok Notes → Imagine model, aspect, and folder.
 
 The image request goes to `https://api.x.ai`, same as chat. It needs the same xAI API key.

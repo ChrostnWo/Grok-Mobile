@@ -1,10 +1,10 @@
-# Grok for Obsidian (laptop + phone)
-
-Repo: https://github.com/ChrostnWo/Grok-Mobile
+# Grok Notes
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.5.3**
+Current release: **1.5.4**
+
+Public name: **Grok Notes**. Plugin id and install folder stay `grok-mobile` so an existing API key in `data.json` is still found. The old Grok-Mobile repo URL redirects here.
 
 ## Interface
 
@@ -45,7 +45,7 @@ This plugin sends the text you choose (selection, note, prompt, or notes in the 
 
 This plugin is not in the community store yet. Install from the release. Full steps: [docs/install.md](docs/install.md).
 
-1. Open the latest release: https://github.com/ChrostnWo/Grok-Mobile/releases/latest
+1. Open the latest release: https://github.com/ChrostnWo/Grok-Notes/releases/latest
 2. Download `main.js`, `manifest.json`, and `styles.css` (or the release zip, then unzip).
 3. Put them in:
 
@@ -53,7 +53,7 @@ This plugin is not in the community store yet. Install from the release. Full st
 
    The folder name must be `grok-mobile`. Replace the three files if you already installed an older version. Leave `data.json` alone — that file holds your API key.
 4. Fully quit Obsidian and open it again (on iOS, swipe the app away). If the plugin was already enabled, turn it off and on under Settings → Community plugins.
-5. Settings → Grok → confirm the model is **Grok 4.7**. Paste an xAI key from https://console.x.ai if you have not already.
+5. Settings → Grok Notes → confirm the model is **Grok 4.7**. Paste an xAI key from https://console.x.ai if you have not already.
 
 ## Use it
 
@@ -103,7 +103,7 @@ Command palette, or the **Imagine** chip on the sheet:
 
 Vault sample uses the 12 newest notes, not every file. Folder uses up to 8 notes in the current folder. Draft from source asks the chat model for one image prompt, which you can edit. Generate calls `grok-imagine-image-2.0` and bills one image. Save writes a jpg into the `Grok` folder. Save and embed drops the image link into the open note.
 
-Settings → Grok → Imagine model, aspect, and folder. Details: [docs/imagine.md](docs/imagine.md).
+Settings → Grok Notes → Imagine model, aspect, and folder. Details: [docs/imagine.md](docs/imagine.md).
 
 ## Layout
 
@@ -111,7 +111,7 @@ Settings → Chat layout: Auto, always sidebar, or always popup sheet. See [phon
 
 ## Models
 
-Default is `grok-4.7` (public xAI API, chat completions). Settings → Grok → Model:
+Default is `grok-4.7` (public xAI API, chat completions). Settings → Grok Notes → Model:
 
 | Picker | API id | Notes |
 | --- | --- | --- |

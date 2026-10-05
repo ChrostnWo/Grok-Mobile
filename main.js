@@ -101,7 +101,7 @@ class GrokPlugin extends Plugin {
     this.abort = null;
     this.pendingOpts = null;
     this.registerView(VIEW_TYPE, (leaf) => new GrokChatView(leaf, this));
-    this.addRibbonIcon("sparkles", "Grok", () => {
+    this.addRibbonIcon("sparkles", "Grok Notes", () => {
       const meta = this.activeNoteMeta();
       this.openChat({
         seed: meta.selection || meta.body || "",
@@ -187,9 +187,9 @@ class GrokPlugin extends Plugin {
     }));
     if (Platform && Platform.isDesktop) {
       const status = this.addStatusBarItem();
-      status.setText("Grok");
+      status.setText("Grok Notes");
       status.addClass("mod-clickable");
-      status.setAttr("aria-label", "Open Grok");
+      status.setAttr("aria-label", "Open Grok Notes");
       status.addEventListener("click", () => this.openChat({ seed: "", label: "chat" }));
       this.statusEl = status;
     }
@@ -244,7 +244,7 @@ class GrokPlugin extends Plugin {
     new Notice(editor ? "Chat history added to the note." : "Opened a note with the chat history.");
   }
   async suggestTitle(editor, view, host) {
-    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
     if (!editor) { new Notice("Open a markdown note first."); return; }
     const body = editor.getValue();
     if (!body.trim()) { new Notice("This note is empty."); return; }
@@ -272,7 +272,7 @@ class GrokPlugin extends Plugin {
     new Notice("Renamed note to " + clean);
   }
   async tagNote(editor, view, host) {
-    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
     if (!editor) { new Notice("Open a markdown note first."); return; }
     const body = editor.getValue();
     if (!body.trim()) { new Notice("This note is empty."); return; }
@@ -322,7 +322,7 @@ class GrokPlugin extends Plugin {
     return head + clip(body || "", this.contextLimit());
   }
   async openChat(opts) {
-    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
     const ui = this.preferredUi();
     if (ui === "sidebar") {
       this.pendingOpts = opts || {};
@@ -348,7 +348,7 @@ class GrokPlugin extends Plugin {
     workspace.revealLeaf(leaf);
   }
   async runQuick({ editor, view, userText, forceInsert, selection }) {
-    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
     const notice = new Notice("Grok is thinking…", 0);
     try {
       const text = await this.complete([{ role: "system", content: this.settings.systemPrompt }, { role: "user", content: userText }], { reasoning_effort: "low" });
@@ -439,7 +439,7 @@ class GrokPlugin extends Plugin {
     const text = partText(message && message.content).trim();
     if (text) return text;
     const reasoning = partText(message && message.reasoning_content).trim();
-    if (reasoning && !text) throw new Error("Grok used the token budget on thinking and returned no summary. Raise Max tokens in Settings → Grok, then try Summarize again.");
+    if (reasoning && !text) throw new Error("Grok used the token budget on thinking and returned no summary. Raise Max tokens in Settings → Grok Notes, then try Summarize again.");
     return "";
   }
   parseSse(raw) {
@@ -484,7 +484,7 @@ class GrokPlugin extends Plugin {
     return out.trim();
   }
   openImagine(source) {
-    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+    if (!this.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
     new ImagineModal(this.app, this, source || "new").open();
   }
   async gatherImagineContext(source) {
@@ -543,7 +543,7 @@ class GrokPlugin extends Plugin {
     const json = res.json || {};
     const item = (json.data && json.data[0]) || {};
     const b64 = item.b64_json || "";
-    if (!b64) throw new Error("Imagine returned no image. Check the image model id in Settings → Grok.");
+    if (!b64) throw new Error("Imagine returned no image. Check the image model id in Settings → Grok Notes.");
     return { b64, revised: item.revised_prompt || "" };
   }
   async saveImagineFile(b64) {
@@ -570,7 +570,7 @@ class GrokPlugin extends Plugin {
   errFromBody(status, raw) {
     let detail = raw || "";
     try { const j = JSON.parse(raw); detail = (j.error && (j.error.message || j.error)) || j.message || raw; } catch (e) {}
-    if (status === 401) return "xAI rejected the API key (401). Check Settings → Grok.";
+    if (status === 401) return "xAI rejected the API key (401). Check Settings → Grok Notes.";
     if (status === 429) return "xAI rate limit (429). Wait a moment and try again.";
     if (status === 400) return "Bad request (400): " + String(detail).slice(0, 220);
     return "xAI error " + status + ": " + String(detail).slice(0, 220);
@@ -800,7 +800,7 @@ async function sendChat(host) {
   const question = (host.promptEl.value || "").trim();
   hideKeyboard(host);
   if (!question) { new Notice("Type a prompt first."); return; }
-  if (!host.plugin.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok."); return; }
+  if (!host.plugin.settings.apiKey) { new Notice("Add your xAI API key in Settings → Grok Notes."); return; }
   if (host.busy) return;
   host.busy = true;
   host.sendBtn.disabled = false;
@@ -1005,7 +1005,7 @@ class GrokChatView extends ItemView {
     this.reply = "";
   }
   getViewType() { return VIEW_TYPE; }
-  getDisplayText() { return "Grok"; }
+  getDisplayText() { return "Grok Notes"; }
   getIcon() { return "sparkles"; }
   async onOpen() {
     this.contentEl.addClass("gm-view");
@@ -1024,7 +1024,7 @@ class GrokSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Grok" });
+    containerEl.createEl("h2", { text: "Grok Notes" });
     const coffee = containerEl.createEl("a", { cls: "gm-coffee", attr: { href: "https://buymeacoffee.com/chrostn" } });
     coffee.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 7h13a3 3 0 0 1 0 6h-1.1A6 6 0 0 1 5 16.9V18h10v-1.1A6 6 0 0 1 15.9 13H17a3 3 0 0 0 0-6H4V7zm1 2v3.2A4 4 0 0 0 14 13V9H5zm12 0h.2a1 1 0 0 1 0 2H17V9z"/></svg><span>Buy me a coffee</span>';
     coffee.addEventListener("click", (e) => { e.preventDefault(); window.open("https://buymeacoffee.com/chrostn", "_blank"); });

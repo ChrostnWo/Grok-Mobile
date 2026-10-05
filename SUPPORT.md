@@ -1,6 +1,6 @@
 # Support
 
-- Questions and bugs: https://github.com/ChrostnWo/Grok-Mobile/issues
+- Questions and bugs: https://github.com/ChrostnWo/Grok-Notes/issues
 - Install help: [docs/install.md](docs/install.md)
 - Phone and laptop layout: [docs/phone-and-laptop.md](docs/phone-and-laptop.md)
 - Imagine: [docs/imagine.md](docs/imagine.md)
