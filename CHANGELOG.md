@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.7
+
+The Buy Me a Coffee button is off the phone sheet as well as the sidebar. It remains in Settings → Grok Notes.
+
 ## 1.5.6
 
 The Buy Me a Coffee button is no longer on the sidebar. It remains on the phone sheet and in Settings → Grok Notes.

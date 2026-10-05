@@ -2,7 +2,7 @@
 
 Talk to Grok from a note on laptop, tablet, and phone. Sidebar on desktop, sheet on mobile. No Grok CLI.
 
-Current release: **1.5.6**
+Current release: **1.5.7**
 
 Public name: **Grok Notes**. Plugin id and install folder stay `grok-mobile` so an existing API key in `data.json` is still found. The old Grok-Mobile repo URL redirects here.
 
